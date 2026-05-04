@@ -50,13 +50,12 @@ class ReceiptReader():
         response = model.generate_content(
             [prompt, receipt_image],
             generation_config=genai.GenerationConfig(
-                response_mime_type="application/json", # Forces strict JSON output!
-                temperature=0.0 # Maximum logic, zero creativity
+                response_mime_type="application/json",
+                temperature=0.0 
             )
         )
         
         try:
-            # It's guaranteed to be JSON, so we can load it directly
             final_data = json.loads(response.text)
             
             return final_data

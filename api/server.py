@@ -1,6 +1,6 @@
 import os
 import json
-from receipt_reader import ReceiptReader as reader
+from api.receipt_reader import ReceiptReader as reader
 from dotenv import load_dotenv
 from PIL import Image
 from fastapi import FastAPI, UploadFile, File, HTTPException
