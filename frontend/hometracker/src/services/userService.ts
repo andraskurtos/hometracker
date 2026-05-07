@@ -32,6 +32,24 @@ export const userService = {
         return data;
     },
 
+    register: async (email: string, password: string, firstName: string, lastName: string) => {
+        const response = await fetch(`${API_BASE_URL}/auth/register`, {
+            method: 'POST',
+            headers: getHeaders(false),
+            body: JSON.stringify({ 
+                email, 
+                password, 
+                first_name: firstName, 
+                last_name: lastName 
+            }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Registration failed");
+
+        return data;
+    },
+
     logout: () => {
         localStorage.removeItem('token');
     },

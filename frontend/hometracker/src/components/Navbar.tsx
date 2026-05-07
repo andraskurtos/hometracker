@@ -1,4 +1,5 @@
 import { User, LogOut } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface NavbarProps {
   onProfileClick: () => void;
@@ -13,13 +14,13 @@ export default function Navbar({ onProfileClick, onLogout, isAuthenticated }: Na
         {/* Spacer for layout balance */}
         <div className="w-20 md:hidden" />
 
-        {/* App Name with a subtle gradient */}
-        <span 
-          onClick={() => window.location.href = '/'}
+        {/* App Name linked to home */}
+        <Link 
+          to="/"
           className="text-xl font-extrabold tracking-wide bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity"
         >
           HomeTracker
-        </span>
+        </Link>
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3 w-20 justify-end">
