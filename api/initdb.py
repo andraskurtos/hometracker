@@ -4,24 +4,28 @@ from config import DB_CONFIG, logger
 
 # The exact SQL I gave you earlier
 CREATE_USERS_TABLE_SQL = """
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
-CREATE TABLE IF NOT EXISTS users (
+-- 1. Create the Households Table
+CREATE TABLE IF NOT EXISTS households (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL,
-    display_name VARCHAR(100),
-    gender VARCHAR(50),
-    date_of_birth DATE,
-    profile_pic_url TEXT,
-    revolut_username VARCHAR(100),
-    discord_id VARCHAR(100),
-    role VARCHAR(20) DEFAULT 'user',
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    join_code VARCHAR(20) UNIQUE NOT NULL, -- Short code like 'A7X9-P2M4'
+    base_currency VARCHAR(3) DEFAULT 'HUF',
+    created_by UUID REFERENCES users(id), -- Links to the user who made it
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. Create the Join Table (Members)
+CREATE TABLE IF NOT EXISTS household_members (
+    household_id UUID REFERENCES households(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(20) DEFAULT 'member', -- 'admin' or 'member'
+    joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    -- This ensures a user can't join the exact same household twice
+    PRIMARY KEY (household_id, user_id) 
 );
 """
 

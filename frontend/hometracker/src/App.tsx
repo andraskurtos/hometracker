@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type JSX } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import Navbar from "./components/Navbar"
 import ReceiptSplitter from "./components/ReceiptSplitter"
