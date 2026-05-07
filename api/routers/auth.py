@@ -1,9 +1,10 @@
 from datetime import datetime, timedelta, timezone
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from jose import jwt
+from jose import jwt, JWTError
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import bcrypt
 
 from config import DB_CONFIG, logger, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
@@ -13,6 +14,7 @@ router = APIRouter(
     tags=["Authentication"]
 )
 
+# --- SCHEMAS ---
 
 def verify_password(plain_password, hashed_password):
     return bcrypt.checkpw(
@@ -40,7 +42,10 @@ class UserRegister(BaseModel):
     password: str
     first_name: str
     last_name: str
-    
+
+# --- ENDPOINTS ---
+
+# REGISTER ENDPOINT
 @router.post("/register")
 def register_user(user: UserRegister):
     conn = None
@@ -72,6 +77,7 @@ def register_user(user: UserRegister):
         if cur: cur.close()
         if conn: conn.close()
         
+# LOGIN ENDPOINT
 @router.post("/login")
 def login_user(user: UserLogin):
     conn = None
@@ -102,6 +108,38 @@ def login_user(user: UserLogin):
     finally:
         if cur: cur.close()
         if conn: conn.close()
+        
+@router.post("/docs-login", include_in_schema=False)
+def swagger_login(form_data: OAuth2PasswordRequestForm = Depends()):
+    fake_json_payload = UserLogin(email=form_data.username, password=form_data.password)
+    return login_user(fake_json_payload)
+        
+# --- BOUNCER ---
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/docs-login")
+
+def get_current_user_id(token: str = Depends(oauth2_scheme)) -> str:
+    """
+        Validates the JWT token and returns the user's UUID.
+        If the token is missing, expired, or forged, it throws 401 error.
+    """
+    
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+        return user_id
+    except JWTError:
+        raise credentials_exception
+     
+
     
         
         

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import receipts, auth
+from fastapi.staticfiles import StaticFiles
+from routers import receipts, auth, users
 from config import logger
 
 
@@ -16,6 +17,9 @@ app.add_middleware(
 
 app.include_router(receipts.router)
 app.include_router(auth.router)
+app.include_router(users.router)
+
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/")
 def health_check():

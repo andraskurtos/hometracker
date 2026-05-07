@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import Navbar from "./components/Navbar"
 import ReceiptSplitter from "./components/ReceiptSplitter"
 import Launchpad from "./components/Launchpad"
-import Login from "./components/Login" // <-- Import it
+import Login from "./components/Login"
+import Profile from "./components/Profile"
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userName, setUserName] = useState('');
+  const [view, setView] = useState<'dashboard' | 'profile'>('dashboard');
 
   // Check if they are already logged in when they open the app
   useEffect(() => {
@@ -22,34 +24,39 @@ function App() {
     localStorage.removeItem('token');
     localStorage.removeItem('userName');
     setIsAuthenticated(false);
+    setView('dashboard');
   };
 
   return (
     <div className="min-h-screen bg-neutral-950 flex flex-col text-neutral-200">
-      <Navbar />
+      <Navbar 
+        isAuthenticated={isAuthenticated} 
+        onProfileClick={() => setView('profile')} 
+        onLogout={handleLogout}
+      />
       
-      <main className="flex-1 flex flex-col items-center justify-center p-6">
+      <main className="flex-1 flex flex-col items-center justify-start p-6 pt-12">
         {!isAuthenticated ? (
-          <Login 
-            onLoginSuccess={(token, name) => {
-              setIsAuthenticated(true);
-              setUserName(name);
-            }} 
-          />
+          <div className="flex-1 flex items-center justify-center w-full">
+            <Login 
+              onLoginSuccess={(token, name) => {
+                setIsAuthenticated(true);
+                setUserName(name);
+              }} 
+            />
+          </div>
         ) : (
-          <div className="w-full max-w-4xl flex flex-col items-center gap-8">
-            <div className="w-full flex justify-between items-center px-4">
-              <h1 className="text-2xl font-bold">Welcome, {userName}!</h1>
-              <button 
-                onClick={handleLogout}
-                className="px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-              >
-                Log Out
-              </button>
-            </div>
-            
-            <Launchpad />
-            <ReceiptSplitter />
+          <div className="w-full max-w-5xl flex flex-col items-center gap-8">
+            {view === 'profile' ? (
+              <Profile 
+                userName={userName} 
+                onBack={() => setView('dashboard')} 
+              />
+            ) : (
+              <>
+                <Launchpad />
+              </>
+            )}
           </div>
         )}
       </main>

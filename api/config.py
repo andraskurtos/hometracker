@@ -28,3 +28,6 @@ SECRET_KEY = os.environ.get("JWT_KEY")
 ALGORITHM="HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES=60*24*7
 
+UPLOAD_DIR = os.environ.get("UPLOAD_DIR")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+

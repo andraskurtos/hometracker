@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
+import { userService } from '../services/userService'; // Import the new service
 
 interface LoginProps {
   onLoginSuccess: (token: string, userName: string) => void;
@@ -17,24 +18,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     setError('');
 
     try {
-      // In production, use your dynamic API_BASE_URL here
-      const response = await fetch(`http://${window.location.hostname}:8000/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || 'Login failed');
-      }
-
-      // Save token to localStorage so they stay logged in!
-      localStorage.setItem('token', data.access_token);
-      localStorage.setItem('userName', data.user.first_name);
+      // Clean and simple call to the service
+      const data = await userService.login(email, password);
       
-      // Tell the parent App component we succeeded
+      // Success! Pass it up to App.tsx
       onLoginSuccess(data.access_token, data.user.first_name);
       
     } catch (err: any) {
@@ -46,8 +33,6 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
   return (
     <div className="w-full max-w-md p-8 bg-neutral-900/40 border border-neutral-800/60 backdrop-blur-md rounded-3xl shadow-2xl relative overflow-hidden">
-      
-      {/* Decorative background glow */}
       <div className="absolute -top-20 -right-20 w-40 h-40 bg-emerald-500/20 rounded-full blur-3xl" />
       
       <div className="relative z-10">
@@ -55,13 +40,12 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         <p className="text-neutral-500 mb-8">Enter your credentials to access your pantry.</p>
 
         {error && (
-          <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm font-medium text-center">
+          <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm font-medium text-center animate-in fade-in zoom-in-95 duration-300">
             {error}
           </div>
         )}
 
         <form onSubmit={handleLogin} className="space-y-5">
-          {/* Email Input */}
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <Mail className="h-5 w-5 text-neutral-500" />
@@ -76,7 +60,6 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             />
           </div>
 
-          {/* Password Input */}
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <Lock className="h-5 w-5 text-neutral-500" />
@@ -97,7 +80,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             className={`w-full py-3.5 rounded-xl font-bold text-lg flex items-center justify-center transition-all mt-4 ${
               isLoading || !email || !password
                 ? 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
-                : 'bg-emerald-500 text-neutral-950 hover:bg-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                : 'bg-emerald-500 text-neutral-950 hover:bg-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)] active:scale-[0.98]'
             }`}
           >
             {isLoading ? (
