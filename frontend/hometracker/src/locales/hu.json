@@ -119,7 +119,20 @@
       "noDescription": "Nincs megadva leírás",
       "joinCodeTitle": "Háztartás csatlakozási kódja",
       "joinCodeHelp": "Ossza meg ezt a kódot lakótársaival vagy családtagjaival, hogy csatlakozhassanak ehhez a háztartáshoz.",
-      "joinedAt": "Csatlakozás időpontja"
+      "joinedAt": "Csatlakozás időpontja",
+      "regenerateCode": "Kód újragenerálása",
+      "confirmRegenerate": "Biztosan új csatlakozási kódot szeretne generálni? A régi kód azonnal érvényét veszti.",
+      "members": "Tagok",
+      "copy": "Másolás",
+      "totalMembers": "tag összesen",
+      "promote": "Előléptetés adminná",
+      "kick": "Eltávolítás a háztartásból",
+      "confirmKick": "Biztosan el szeretné távolítani ezt a tagot?",
+      "confirmPromote": "Biztosan admin jogot szeretne adni ennek a tagnak?",
+      "errors": {
+        "regenerateFailed": "A kód újragenerálása sikertelen.",
+        "updateFailed": "A frissítés sikertelen."
+      }
     },
     "currencies": {
       "HUF": "Magyar Forint (HUF)",

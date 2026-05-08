@@ -1,16 +1,139 @@
-import { Home, Copy, Check, ArrowLeft, Users, Shield } from 'lucide-react';
-import { useState } from 'react';
+import { Home, Copy, Check, ArrowLeft, Users, Shield, RefreshCw, Pencil, Trash2, UserPlus, Save, Loader2 } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Household } from '../services/householdService';
+import { householdService, type Household, type HouseholdMember } from '../services/householdService';
+import { getAssetUrl } from '../utils/assetUtils';
 
 interface HouseholdManagementProps {
   household: Household;
   onBack: () => void;
+  onUpdate: () => void;
 }
 
-export default function HouseholdManagement({ household, onBack }: HouseholdManagementProps) {
+// Sub-component for editable fields
+const EditableHeader = ({ 
+  field, 
+  value, 
+  isEditing, 
+  isSaving, 
+  editValue, 
+  isAdmin, 
+  onEdit, 
+  onChange, 
+  onSave, 
+  onCancel, 
+  t 
+}: any) => {
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onSave(field);
+    } else if (e.key === 'Escape') {
+      onCancel();
+    }
+  };
+
+  return (
+    <div className="group relative">
+      {isEditing ? (
+        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-200">
+          {field === 'base_currency' ? (
+            <select
+              value={editValue}
+              onChange={(e) => onChange(e.target.value)}
+              onBlur={() => onSave(field)}
+              onKeyDown={onKeyDown}
+              disabled={isSaving}
+              className="bg-neutral-950/50 border border-emerald-500/50 rounded-lg px-2 py-1 text-neutral-200 outline-none disabled:opacity-50"
+              autoFocus
+            >
+              <option value="HUF">HUF</option>
+              <option value="EUR">EUR</option>
+              <option value="USD">USD</option>
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={editValue}
+              onChange={(e) => onChange(e.target.value)}
+              onBlur={() => onSave(field)}
+              onKeyDown={onKeyDown}
+              disabled={isSaving}
+              className="bg-neutral-950/50 border border-emerald-500/50 rounded-lg px-3 py-1 text-neutral-200 outline-none w-full disabled:opacity-50"
+              autoFocus
+            />
+          )}
+          <div className="p-1.5 text-emerald-500 min-w-8 flex justify-center">
+            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          {field === 'name' ? (
+            <h1 className="text-3xl font-black text-neutral-100">{value}</h1>
+          ) : field === 'description' ? (
+            <p className="text-neutral-500">{value || t('household.management.noDescription')}</p>
+          ) : (
+            <span className="px-3 py-1 rounded-full bg-neutral-800 border border-neutral-700 text-xs font-medium text-neutral-400">
+              {value}
+            </span>
+          )}
+          {isAdmin && (
+            <button 
+              onClick={() => onEdit(field)}
+              className="p-1.5 rounded-lg text-neutral-600 hover:text-emerald-400 hover:bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-all"
+            >
+              <Pencil size={14} />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default function HouseholdManagement({ household, onBack, onUpdate }: HouseholdManagementProps) {
   const { t } = useTranslation();
+  const [members, setMembers] = useState<HouseholdMember[]>([]);
+  const [isLoadingMembers, setIsLoadingMembers] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [isRegeneratingCode, setIsRegeneratingCode] = useState(false);
+  
+  // Editing state
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<any>({
+    name: household.name,
+    description: household.description || '',
+    base_currency: household.base_currency
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Sync state when household prop changes
+  useEffect(() => {
+    setEditValues({
+      name: household.name,
+      description: household.description || '',
+      base_currency: household.base_currency
+    });
+  }, [household]);
+
+  const isAdmin = household.role === 'admin';
+
+  const loadMembers = useCallback(async () => {
+    setIsLoadingMembers(true);
+    try {
+      const data = await householdService.getHouseholdMembers(household.id);
+      setMembers(data);
+    } catch (err) {
+      console.error("Failed to load members", err);
+    } finally {
+      setIsLoadingMembers(false);
+    }
+  }, [household.id]);
+
+  useEffect(() => {
+    loadMembers();
+  }, [loadMembers]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(household.join_code);
@@ -18,9 +141,76 @@ export default function HouseholdManagement({ household, onBack }: HouseholdMana
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleRegenerateCode = async () => {
+    if (!window.confirm(t('household.management.confirmRegenerate'))) return;
+    setIsRegeneratingCode(true);
+    try {
+      await householdService.regenerateJoinCode(household.id);
+      onUpdate();
+    } catch (err) {
+      alert(t('household.management.errors.regenerateFailed'));
+    } finally {
+      setIsRegeneratingCode(false);
+    }
+  };
+
+  const handleUpdateField = async (field: string) => {
+    if (isSaving || editingField !== field) return;
+
+    const newValue = editValues[field];
+    const oldValue = (household as any)[field] || '';
+
+    if (newValue === oldValue) {
+      setEditingField(null);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await householdService.updateHousehold(household.id, { [field]: newValue });
+      setEditingField(null);
+      // Safety check: ensure onUpdate is a function
+      if (typeof onUpdate === 'function') {
+        await onUpdate();
+      }
+    } catch (err) {
+      console.error("Household update failed:", err);
+      alert(t('household.management.errors.updateFailed'));
+      // Reset values to original on error
+      setEditValues({
+        name: household.name,
+        description: household.description || '',
+        base_currency: household.base_currency
+      });
+      setEditingField(null);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleKick = async (userId: string) => {
+    if (!window.confirm(t('household.management.confirmKick'))) return;
+    try {
+      await householdService.kickMember(household.id, userId);
+      loadMembers();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handlePromote = async (userId: string) => {
+    if (!window.confirm(t('household.management.confirmPromote'))) return;
+    try {
+      await householdService.promoteMember(household.id, userId);
+      loadMembers();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   return (
-    <div className="w-full max-w-3xl mx-auto flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header */}
+    <div className="w-full max-w-4xl mx-auto flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      {/* Back Button */}
       <button 
         onClick={onBack}
         className="flex items-center gap-2 text-neutral-500 hover:text-neutral-200 transition-colors group w-fit"
@@ -29,44 +219,91 @@ export default function HouseholdManagement({ household, onBack }: HouseholdMana
         <span>{t('common.backToLaunchpad')}</span>
       </button>
 
-      {/* Hero Section */}
-      <div className="p-8 bg-neutral-900/40 border border-neutral-800/60 rounded-[2.5rem] backdrop-blur-md relative overflow-hidden">
+      {/* Household Hero */}
+      <div className="p-8 bg-neutral-900/40 border border-neutral-800/60 rounded-[2.5rem] backdrop-blur-md relative overflow-hidden shadow-xl">
         <div className="absolute top-0 right-0 p-12 text-neutral-800 opacity-10">
           <Home size={160} />
         </div>
         
         <div className="relative z-10">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400">
-              <Home size={32} />
+          <div className="flex items-start gap-5">
+            <div className="p-4 rounded-[1.5rem] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-inner">
+              <Home size={40} />
             </div>
-            <div>
-              <h1 className="text-3xl font-black text-neutral-100">{household.name}</h1>
-              <p className="text-neutral-500">{household.description || t('household.management.noDescription')}</p>
+            <div className="flex-1 space-y-3">
+              <EditableHeader 
+                field="name" 
+                value={household.name} 
+                isEditing={editingField === 'name'}
+                isSaving={isSaving}
+                editValue={editValues.name}
+                isAdmin={isAdmin}
+                onEdit={setEditingField}
+                onChange={(val: string) => setEditValues((p: any) => ({...p, name: val}))}
+                onSave={handleUpdateField}
+                onCancel={() => setEditingField(null)}
+                t={t}
+              />
+              <EditableHeader 
+                field="description" 
+                value={household.description} 
+                isEditing={editingField === 'description'}
+                isSaving={isSaving}
+                editValue={editValues.description}
+                isAdmin={isAdmin}
+                onEdit={setEditingField}
+                onChange={(val: string) => setEditValues((p: any) => ({...p, description: val}))}
+                onSave={handleUpdateField}
+                onCancel={() => setEditingField(null)}
+                t={t}
+              />
+              
+              <div className="flex flex-wrap gap-3 pt-2">
+                <span className="px-3 py-1 rounded-full bg-neutral-800 border border-neutral-700 text-xs font-medium text-neutral-400 flex items-center gap-1.5">
+                  <Shield size={12} /> {household.role.toUpperCase()}
+                </span>
+                <EditableHeader 
+                  field="base_currency" 
+                  value={household.base_currency} 
+                  isEditing={editingField === 'base_currency'}
+                  isSaving={isSaving}
+                  editValue={editValues.base_currency}
+                  isAdmin={isAdmin}
+                  onEdit={setEditingField}
+                  onChange={(val: string) => setEditValues((p: any) => ({...p, base_currency: val}))}
+                  onSave={handleUpdateField}
+                  onCancel={() => setEditingField(null)}
+                  t={t}
+                />
+              </div>
             </div>
-          </div>
-          
-          <div className="flex flex-wrap gap-3 mt-6">
-            <span className="px-3 py-1 rounded-full bg-neutral-800 border border-neutral-700 text-xs font-medium text-neutral-400 flex items-center gap-1.5">
-              <Shield size={12} /> {household.role.toUpperCase()}
-            </span>
-            <span className="px-3 py-1 rounded-full bg-neutral-800 border border-neutral-700 text-xs font-medium text-neutral-400">
-              {household.base_currency}
-            </span>
           </div>
         </div>
       </div>
 
-      {/* Join Code Card */}
-      <div className="p-8 bg-neutral-900/40 border border-neutral-800/60 rounded-3xl backdrop-blur-md">
-        <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-widest mb-4 ml-1">{t('household.management.joinCodeTitle')}</h3>
-        <div className="flex items-center gap-4 bg-neutral-950/50 p-6 rounded-2xl border border-neutral-800">
-          <code className="text-4xl font-mono font-bold tracking-widest text-emerald-400 flex-1">
+      {/* Join Code Area */}
+      <div className="p-8 bg-neutral-900/40 border border-neutral-800/60 rounded-[2rem] backdrop-blur-md shadow-lg">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-widest ml-1">{t('household.management.joinCodeTitle')}</h3>
+          {isAdmin && (
+            <button 
+              onClick={handleRegenerateCode}
+              disabled={isRegeneratingCode}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-800 border border-neutral-700 text-xs font-bold text-neutral-400 hover:text-emerald-400 hover:border-emerald-500/50 transition-all"
+            >
+              <RefreshCw size={14} className={isRegeneratingCode ? 'animate-spin' : ''} />
+              {t('household.management.regenerateCode')}
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-4 bg-neutral-950/50 p-6 rounded-2xl border border-neutral-800 shadow-inner group overflow-hidden">
+          <code className="text-3xl md:text-4xl font-mono font-black tracking-wide text-emerald-400 flex-1 overflow-x-auto whitespace-nowrap scrollbar-hide py-1">
             {household.join_code}
           </code>
           <button 
             onClick={copyToClipboard}
-            className={`p-4 rounded-xl transition-all ${copied ? 'bg-emerald-500 text-neutral-950 shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700'}`}
+            className={`p-4 rounded-xl transition-all active:scale-95 ${copied ? 'bg-emerald-500 text-neutral-950 shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'bg-neutral-800 text-neutral-400 hover:text-emerald-200 hover:bg-neutral-700'}`}
+            title={t('common.copy')}
           >
             {copied ? <Check size={24} /> : <Copy size={24} />}
           </button>
@@ -76,25 +313,88 @@ export default function HouseholdManagement({ household, onBack }: HouseholdMana
         </p>
       </div>
 
-      {/* Info Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="p-6 bg-neutral-900/40 border border-neutral-800/60 rounded-3xl backdrop-blur-md flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-blue-500/10 text-blue-400">
-            <Users size={20} />
+      {/* Members Section */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between px-2">
+          <div className="flex items-center gap-3">
+            <Users size={20} className="text-neutral-400" />
+            <h3 className="text-xl font-bold text-neutral-200">{t('household.management.members')}</h3>
           </div>
-          <div>
-            <p className="text-xs text-neutral-500 uppercase font-semibold">{t('common.status')}</p>
-            <p className="text-neutral-200">{t('common.active')}</p>
-          </div>
+          <span className="px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-xs font-bold text-neutral-500">
+            {members.length} {t('household.management.totalMembers')}
+          </span>
         </div>
-        <div className="p-6 bg-neutral-900/40 border border-neutral-800/60 rounded-3xl backdrop-blur-md flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-purple-500/10 text-purple-400">
-            <Shield size={20} />
-          </div>
-          <div>
-            <p className="text-xs text-neutral-500 uppercase font-semibold">{t('household.management.joinedAt')}</p>
-            <p className="text-neutral-200">{new Date(household.joined_at).toLocaleDateString()}</p>
-          </div>
+
+        <div className="grid grid-cols-1 gap-4">
+          {isLoadingMembers ? (
+            <div className="flex flex-col items-center justify-center py-12 text-neutral-600">
+              <Loader2 className="animate-spin mb-2" />
+              <p>{t('common.loading')}</p>
+            </div>
+          ) : (
+            members.map((member) => (
+              <div 
+                key={member.id}
+                className="group p-5 bg-neutral-900/40 border border-neutral-800/60 rounded-2xl backdrop-blur-sm flex items-center justify-between transition-all hover:bg-neutral-900/60 hover:border-neutral-700/60 shadow-sm"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-xl bg-neutral-800 border border-neutral-700 flex items-center justify-center overflow-hidden">
+                      {member.profile_pic_url ? (
+                        <img src={getAssetUrl(member.profile_pic_url) || ''} alt={member.display_name || ''} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xl font-bold text-neutral-600">
+                          {member.first_name[0]}{member.last_name[0]}
+                        </span>
+                      )}
+                    </div>
+                    {member.role === 'admin' && (
+                      <div 
+                        className="absolute -top-1.5 -right-1.5 p-1 bg-emerald-500 rounded-full text-neutral-950 border-2 border-neutral-950 shadow-lg z-10" 
+                        title="Admin"
+                      >
+                        <Shield size={10} strokeWidth={3} />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-neutral-100 flex items-center gap-2 text-lg">
+                      {member.display_name || `${member.first_name} ${member.last_name}`}
+                      {member.id === localStorage.getItem('userId') && (
+                        <span className="text-[10px] uppercase tracking-widest font-black px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          {t('common.you')}
+                        </span>
+                      )}
+                    </h4>
+                    <p className="text-xs text-neutral-500 font-medium">
+                      {t('household.management.joinedAt')}: {new Date(member.joined_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+
+                {isAdmin && member.id !== localStorage.getItem('userId') && (
+                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {member.role !== 'admin' && (
+                      <button 
+                        onClick={() => handlePromote(member.id)}
+                        className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white transition-all"
+                        title={t('household.management.promote')}
+                      >
+                        <UserPlus size={18} />
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => handleKick(member.id)}
+                      className="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all"
+                      title={t('household.management.kick')}
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

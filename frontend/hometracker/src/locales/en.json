@@ -119,7 +119,20 @@
       "noDescription": "No description provided",
       "joinCodeTitle": "Household Join Code",
       "joinCodeHelp": "Share this code with your roommates or family members so they can join this household.",
-      "joinedAt": "Joined At"
+      "joinedAt": "Joined at",
+      "regenerateCode": "Regenerate Code",
+      "copy": "Copy",
+      "confirmRegenerate": "Are you sure you want to regenerate the join code? The old code will stop working immediately.",
+      "members": "Members",
+      "totalMembers": "members total",
+      "promote": "Promote to Admin",
+      "kick": "Kick from Household",
+      "confirmKick": "Are you sure you want to remove this member?",
+      "confirmPromote": "Are you sure you want to grant admin rights to this member?",
+      "errors": {
+        "regenerateFailed": "Failed to regenerate code.",
+        "updateFailed": "Update failed."
+      }
     },
     "currencies": {
       "HUF": "Hungarian Forint (HUF)",

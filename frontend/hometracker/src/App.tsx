@@ -151,6 +151,7 @@ function App() {
                 <HouseholdManagement 
                   household={households[0]} 
                   onBack={() => navigate('/')} 
+                  onUpdate={fetchHouseholds}
                 />
               ) : (
                 <Navigate to="/setup-household" replace />

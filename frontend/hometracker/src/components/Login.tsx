@@ -101,6 +101,8 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
                 </div>
                 <input
                   type="text"
+                  name="given-name"
+                  autoComplete="given-name"
                   required
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
@@ -114,6 +116,8 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
                 </div>
                 <input
                   type="text"
+                  name="family-name"
+                  autoComplete="family-name"
                   required
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
@@ -130,6 +134,8 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
             </div>
             <input
               type="email"
+              name="email"
+              autoComplete="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -144,6 +150,8 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
             </div>
             <input
               type="password"
+              name="password"
+              autoComplete={mode === 'login' ? "current-password" : "new-password"}
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -159,6 +167,8 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
               </div>
               <input
                 type="password"
+                name="confirm-password"
+                autoComplete="new-password"
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}

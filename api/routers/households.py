@@ -211,7 +211,7 @@ def update_household(household_id: str, update_data: HouseholdUpdate, user_id: s
         
 @router.put("/{household_id}/regenerate-code")
 def regenerate_household_code(household_id: str, user_id: str = Depends(get_current_user_id)):
-    new_code = generate_join_code
+    new_code = generate_join_code()
     conn = None
     cur = None
     try:
@@ -234,7 +234,39 @@ def regenerate_household_code(household_id: str, user_id: str = Depends(get_curr
         if cur: cur.close()
         if conn: conn.close()
         
-@router.put("/{household-id}/deactivate/{target_user_id}")
+@router.put("/{household_id}/promote/{target_user_id}")
+def promote_member(household_id: str, target_user_id: str, user_id: str = Depends(get_current_user_id)):
+    if user_id == target_user_id:
+        raise HTTPException(status_code=400, detail="You cannot promote yourself.")
+
+    conn = None
+    cur = None
+    
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        verify_admin_status(cur, household_id, user_id)
+        
+        cur.execute("""
+                    UPDATE household_members
+                    SET role = 'admin'
+                    WHERE household_id = %s AND user_id = %s And is_active = true
+                    RETURNING user_id;
+                    """, (household_id, target_user_id))
+        if not cur.fetchone():
+            raise HTTPException(status_code=404, detail="User is not active in the household")
+        
+        conn.commit()
+        return {"message": "User successfully promoted to admin in household"}
+    except psycopg2.Error as e:
+        logger.error(f"Database error while promoting user {target_user_id} to admin in household {household_id}: {e}")
+        raise HTTPException(status_code=500, detail="Database error while promoting user to admin in household")
+    finally:
+        if cur: cur.close()
+        if conn: conn.close()
+        
+@router.put("/{household_id}/deactivate/{target_user_id}")
 def deactivate_member(household_id: str, target_user_id: str, user_id: str = Depends(get_current_user_id)):
     if user_id == target_user_id:
         raise HTTPException(status_code=400, detail="You cannot kick yourself. Use leave endpoint instead.")
@@ -254,7 +286,7 @@ def deactivate_member(household_id: str, target_user_id: str, user_id: str = Dep
         cur.execute("""
                     UPDATE household_members
                     SET is_active = false
-                    WHERE household_id = %s AND user_id = %s
+                    WHERE household_id = %s AND user_id = %s AND is_active = true
                     RETURNING user_id;
                     """, (household_id, target_user_id))
         if not cur.fetchone():

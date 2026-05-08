@@ -25,6 +25,16 @@ export interface Household {
     joined_at: string;
 }
 
+export interface HouseholdMember {
+    id: string;
+    first_name: string;
+    last_name: string;
+    display_name: string | null;
+    profile_pic_url: string | null;
+    role: 'admin' | 'member';
+    joined_at: string;
+}
+
 export const householdService = {
     createHousehold: async (name: string, description?: string, baseCurrency: string = "HUF") => {
         const response = await fetch(`${API_BASE_URL}/household/`, {
@@ -61,6 +71,61 @@ export const householdService = {
 
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail || "Failed to fetch households");
+        return data;
+    },
+
+    getHouseholdMembers: async (householdId: number): Promise<HouseholdMember[]> => {
+        const response = await fetch(`${API_BASE_URL}/household/${householdId}/members`, {
+            headers: getHeaders(),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Failed to fetch members");
+        return data;
+    },
+
+    updateHousehold: async (householdId: number, payload: { name?: string, description?: string, base_currency?: string }) => {
+        const response = await fetch(`${API_BASE_URL}/household/${householdId}`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Failed to update household");
+        return data;
+    },
+
+    regenerateJoinCode: async (householdId: number) => {
+        const response = await fetch(`${API_BASE_URL}/household/${householdId}/regenerate-code`, {
+            method: 'PUT',
+            headers: getHeaders(),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Failed to regenerate join code");
+        return data.new_code;
+    },
+
+    promoteMember: async (householdId: number, userId: string) => {
+        const response = await fetch(`${API_BASE_URL}/household/${householdId}/promote/${userId}`, {
+            method: 'PUT',
+            headers: getHeaders(),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Failed to promote member");
+        return data;
+    },
+
+    kickMember: async (householdId: number, userId: string) => {
+        const response = await fetch(`${API_BASE_URL}/household/${householdId}/deactivate/${userId}`, {
+            method: 'PUT',
+            headers: getHeaders(),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Failed to kick member");
         return data;
     }
 };

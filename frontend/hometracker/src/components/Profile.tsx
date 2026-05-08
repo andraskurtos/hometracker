@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { User, ShieldCheck, CreditCard, ArrowLeft, Camera, Loader2, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { userService } from '../services/userService';
+import { getAssetUrl } from '../utils/assetUtils';
 
 interface ProfileProps {
   onBack: () => void;
@@ -71,9 +72,7 @@ export default function Profile({ onBack, userName }: ProfileProps) {
     }
   };
 
-  const fullAvatarUrl = formData.profilePicUrl
-    ? `http://${window.location.hostname}:8000${formData.profilePicUrl}` 
-    : null;
+  const fullAvatarUrl = getAssetUrl(formData.profilePicUrl);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
