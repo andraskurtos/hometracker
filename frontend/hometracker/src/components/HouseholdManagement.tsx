@@ -408,8 +408,8 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
         <Card className="p-8 rounded-[2rem] border-red-500/20 bg-red-500/5">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="text-center md:text-left">
-              <h3 className="text-sm font-semibold text-red-500 uppercase tracking-widest ml-1 mb-2">Danger Zone</h3>
-              <p className="text-neutral-500 text-sm">Once you delete a household, there is no going back. Please be certain.</p>
+              <h3 className="text-sm font-semibold text-red-500 uppercase tracking-widest ml-1 mb-2">{t('common.dangerZone')}</h3>
+              <p className="text-neutral-500 text-sm">{t('household.management.deleteWarning')}</p>
             </div>
             <Button 
               variant="danger"

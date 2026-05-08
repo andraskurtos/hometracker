@@ -7,7 +7,10 @@
     "saveChanges": "Save Changes",
     "status": "Status",
     "active": "Active",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "dangerZone": "Danger Zone",
+    "you": "You",
+    "cancel": "Cancel"
   },
   "auth": {
     "signIn": "Sign In",
@@ -133,7 +136,8 @@
       "errors": {
         "regenerateFailed": "Failed to regenerate code.",
         "updateFailed": "Update failed."
-      }
+      },
+      "deleteWarning": "Once you delete a household, there is no going back. Please be certain."
     },
     "currencies": {
       "HUF": "Hungarian Forint (HUF)",

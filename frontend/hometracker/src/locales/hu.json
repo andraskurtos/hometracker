@@ -7,7 +7,10 @@
     "saveChanges": "Változtatások mentése",
     "status": "Állapot",
     "active": "Aktív",
-    "loading": "Betöltés..."
+    "loading": "Betöltés...",
+    "dangerZone": "Veszélyzóna",
+    "you": "Ön",
+    "cancel": "Mégsem"
   },
   "auth": {
     "signIn": "Bejelentkezés",
@@ -131,7 +134,9 @@
       "errors": {
         "regenerateFailed": "A kód újragenerálása sikertelen.",
         "updateFailed": "A frissítés sikertelen."
-      }
+      },
+      "deleteHousehold": "Háztartás törlése",
+      "deleteWarning": "A háztartás törlése végleges. Biztosan ezt akarja?"
     },
     "currencies": {
       "HUF": "Magyar Forint (HUF)",
