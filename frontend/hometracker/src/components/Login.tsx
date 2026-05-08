@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Lock, Loader2, ArrowRight, User } from 'lucide-react';
+import { Mail, Lock, ArrowRight, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { userService } from '../services/userService';
+import Card from './ui/Card';
+import Button from './ui/Button';
+import Input from './ui/Input';
 
 interface LoginProps {
   onLoginSuccess: (token: string, userName: string) => void;
@@ -67,7 +70,7 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
   };
 
   return (
-    <div className="w-full max-w-md p-8 bg-neutral-900/40 border border-neutral-800/60 backdrop-blur-md rounded-3xl shadow-2xl relative overflow-hidden">
+    <Card className="w-full max-w-md relative overflow-hidden">
       <div className="absolute -top-20 -right-20 w-40 h-40 bg-emerald-500/20 rounded-full blur-3xl" />
       
       <div className="relative z-10">
@@ -95,106 +98,78 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'register' && (
             <div className="grid grid-cols-2 gap-4">
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <User className="h-4 w-4 text-neutral-500" />
-                </div>
-                <input
-                  type="text"
-                  name="given-name"
-                  autoComplete="given-name"
-                  required
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-neutral-800/50 border border-neutral-700 rounded-xl text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-sm"
-                  placeholder={t('auth.firstName')}
-                />
-              </div>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <User className="h-4 w-4 text-neutral-500" />
-                </div>
-                <input
-                  type="text"
-                  name="family-name"
-                  autoComplete="family-name"
-                  required
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-neutral-800/50 border border-neutral-700 rounded-xl text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-sm"
-                  placeholder={t('auth.lastName')}
-                />
-              </div>
+              <Input
+                type="text"
+                name="given-name"
+                autoComplete="given-name"
+                required
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                icon={<User className="h-4 w-4" />}
+                placeholder={t('auth.firstName')}
+                className="text-sm"
+              />
+              <Input
+                type="text"
+                name="family-name"
+                autoComplete="family-name"
+                required
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                icon={<User className="h-4 w-4" />}
+                placeholder={t('auth.lastName')}
+                className="text-sm"
+              />
             </div>
           )}
 
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Mail className="h-5 w-5 text-neutral-500" />
-            </div>
-            <input
-              type="email"
-              name="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 bg-neutral-800/50 border border-neutral-700 rounded-xl text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
-              placeholder={t('auth.email')}
-            />
-          </div>
+          <Input
+            type="email"
+            name="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            icon={<Mail className="h-5 w-5" />}
+            placeholder={t('auth.email')}
+          />
 
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Lock className="h-5 w-5 text-neutral-500" />
-            </div>
-            <input
-              type="password"
-              name="password"
-              autoComplete={mode === 'login' ? "current-password" : "new-password"}
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 bg-neutral-800/50 border border-neutral-700 rounded-xl text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
-              placeholder={t('auth.password')}
-            />
-          </div>
+          <Input
+            type="password"
+            name="password"
+            autoComplete={mode === 'login' ? "current-password" : "new-password"}
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            icon={<Lock className="h-5 w-5" />}
+            placeholder={t('auth.password')}
+          />
 
           {mode === 'register' && (
-            <div className="relative animate-in fade-in slide-in-from-top-1 duration-300">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-neutral-500" />
-              </div>
-              <input
+            <div className="animate-in fade-in slide-in-from-top-1 duration-300">
+              <Input
                 type="password"
                 name="confirm-password"
                 autoComplete="new-password"
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 bg-neutral-800/50 border border-neutral-700 rounded-xl text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
+                icon={<Lock className="h-5 w-5" />}
                 placeholder={t('auth.confirmPassword')}
               />
             </div>
           )}
 
-          <button
+          <Button
             type="submit"
-            disabled={isLoading || !isFormValid()}
-            className={`w-full py-3.5 rounded-xl font-bold text-lg flex items-center justify-center transition-all mt-4 ${
-              isLoading || !isFormValid()
-                ? 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
-                : 'bg-emerald-500 text-neutral-950 hover:bg-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)] active:scale-[0.98]'
-            }`}
+            isLoading={isLoading}
+            disabled={!isFormValid()}
+            variant={isLoading || !isFormValid() ? 'neutral' : 'primary'}
+            className="w-full py-3.5 text-lg mt-4"
+            icon={<ArrowRight className="ml-2 w-5 h-5 order-last" />}
           >
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <>
-                {mode === 'login' ? t('auth.signIn') : t('auth.signUp')} <ArrowRight className="ml-2 w-5 h-5" />
-              </>
-            )}
-          </button>
+            {mode === 'login' ? t('auth.signIn') : t('auth.signUp')}
+          </Button>
         </form>
 
         <div className="mt-8 text-center">
@@ -217,6 +192,6 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
           </button>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

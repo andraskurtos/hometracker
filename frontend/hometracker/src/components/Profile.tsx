@@ -1,46 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { User, ShieldCheck, CreditCard, ArrowLeft, Camera, Loader2, CheckCircle2 } from 'lucide-react';
+import { User, ShieldCheck, CreditCard, ArrowLeft, Camera, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { userService } from '../services/userService';
 import { getAssetUrl } from '../utils/assetUtils';
+import Card from './ui/Card';
+import Button from './ui/Button';
+import Input from './ui/Input';
+import Badge from './ui/Badge';
+import GlassSection from './ui/GlassSection';
 
 interface ProfileProps {
   onBack: () => void;
   userName: string;
 }
-
-const InputField = ({ label, name, value, onChange, isFieldEmpty, type = "text", placeholder = "" }: { 
-  label: string, 
-  name: string, 
-  value: string, 
-  onChange: (name: string, value: string) => void,
-  isFieldEmpty: (val: string) => boolean,
-  type?: string, 
-  placeholder?: string 
-}) => (
-  <div className="flex flex-col gap-1.5 w-full">
-    <label className="text-xs font-medium text-neutral-500 uppercase tracking-wider ml-1">{label}</label>
-    <input
-      type={type}
-      value={value}
-      onChange={(e) => onChange(name, e.target.value)}
-      placeholder={placeholder}
-      className={`w-full px-4 py-2.5 rounded-xl bg-neutral-900/60 border ${isFieldEmpty(value) ? 'border-red-500/50 focus:border-red-500' : 'border-neutral-800/60 focus:border-emerald-500/50'} text-neutral-200 placeholder:text-neutral-600 outline-none transition-all duration-200`}
-    />
-  </div>
-);
-
-const Section = ({ title, icon: Icon, children }: { title: string, icon: any, children: React.ReactNode }) => (
-  <div className="w-full bg-neutral-900/30 border border-neutral-800/40 rounded-2xl p-6 backdrop-blur-sm">
-    <div className="flex items-center gap-2 mb-6 text-neutral-400">
-      <Icon size={18} strokeWidth={2} />
-      <h3 className="font-semibold text-sm uppercase tracking-widest">{title}</h3>
-    </div>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {children}
-    </div>
-  </div>
-);
 
 export default function Profile({ onBack, userName }: ProfileProps) {
   const { t } = useTranslation();
@@ -138,9 +110,10 @@ export default function Profile({ onBack, userName }: ProfileProps) {
 
   if (isLoading) {
     return (
-      <div className="w-full h-64 flex flex-col items-center justify-center text-emerald-500">
-        <Loader2 className="w-10 h-10 animate-spin mb-4" />
-        <p className="text-neutral-500 animate-pulse">{t('profile.fetchingDetails')}</p>
+      <div className="w-full h-64 flex flex-col items-center justify-center">
+        <Button variant="ghost" isLoading className="text-emerald-500">
+          {t('profile.fetchingDetails')}
+        </Button>
       </div>
     );
   }
@@ -165,15 +138,14 @@ export default function Profile({ onBack, userName }: ProfileProps) {
         </button>
         
         {saveSuccess && (
-          <div className="flex items-center gap-2 text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-4 py-1.5 rounded-full animate-in zoom-in duration-300">
-            <CheckCircle2 size={16} />
-            <span className="text-sm font-medium">{t('profile.changesSaved')}</span>
-          </div>
+          <Badge variant="emerald" icon={<CheckCircle2 size={16} />} className="animate-in zoom-in duration-300">
+            {t('profile.changesSaved')}
+          </Badge>
         )}
       </div>
 
       {/* Profile Pic Area */}
-      <div className="flex flex-col md:flex-row items-center gap-8 p-8 bg-neutral-900/40 border border-neutral-800/60 rounded-3xl backdrop-blur-md shadow-xl">
+      <Card className="flex flex-col md:flex-row items-center gap-8">
         <div className="relative group">
           <div className="w-32 h-32 rounded-full bg-neutral-800 border-2 border-neutral-700 overflow-hidden flex items-center justify-center shadow-[0_0_30px_rgba(0,0,0,0.5)]">
             {fullAvatarUrl? (
@@ -194,16 +166,34 @@ export default function Profile({ onBack, userName }: ProfileProps) {
           <h2 className="text-3xl font-bold text-neutral-100 mb-1">{formData.displayName || t('profile.setDisplayName')}</h2>
           <p className="text-neutral-500">{t('profile.memberSince', { year: new Date().getFullYear() })}</p>
         </div>
-      </div>
+      </Card>
 
       {/* Form Sections */}
-      <Section title={t('profile.sections.name')} icon={User}>
-        <InputField label={t('profile.fields.firstName')} name="firstName" value={formData.firstName} onChange={handleInputChange} isFieldEmpty={isFieldEmpty} placeholder={t('profile.placeholders.firstName')} />
-        <InputField label={t('profile.fields.lastName')} name="lastName" value={formData.lastName} onChange={handleInputChange} isFieldEmpty={isFieldEmpty} placeholder={t('profile.placeholders.lastName')} />
-        <InputField label={t('profile.fields.displayName')} name="displayName" value={formData.displayName} onChange={handleInputChange} isFieldEmpty={isFieldEmpty} placeholder={t('profile.placeholders.displayName')} />
-      </Section>
+      <GlassSection title={t('profile.sections.name')} icon={<User size={18} />}>
+        <Input 
+          label={t('profile.fields.firstName')} 
+          value={formData.firstName} 
+          onChange={(e) => handleInputChange('firstName', e.target.value)} 
+          error={isFieldEmpty(formData.firstName)} 
+          placeholder={t('profile.placeholders.firstName')} 
+        />
+        <Input 
+          label={t('profile.fields.lastName')} 
+          value={formData.lastName} 
+          onChange={(e) => handleInputChange('lastName', e.target.value)} 
+          error={isFieldEmpty(formData.lastName)} 
+          placeholder={t('profile.placeholders.lastName')} 
+        />
+        <Input 
+          label={t('profile.fields.displayName')} 
+          value={formData.displayName} 
+          onChange={(e) => handleInputChange('displayName', e.target.value)} 
+          error={isFieldEmpty(formData.displayName)} 
+          placeholder={t('profile.placeholders.displayName')} 
+        />
+      </GlassSection>
 
-      <Section title={t('profile.sections.personalData')} icon={ShieldCheck}>
+      <GlassSection title={t('profile.sections.personalData')} icon={<ShieldCheck size={18} />}>
         <div className="flex flex-col gap-1.5 w-full">
           <label className="text-xs font-medium text-neutral-500 uppercase tracking-wider ml-1">{t('profile.fields.gender')}</label>
           <select 
@@ -217,27 +207,41 @@ export default function Profile({ onBack, userName }: ProfileProps) {
             <option value="other">{t('profile.genderOptions.other')}</option>
           </select>
         </div>
-        <InputField label={t('profile.fields.dob')} name="dob" value={formData.dob} onChange={handleInputChange} isFieldEmpty={isFieldEmpty} type="date" />
-      </Section>
+        <Input 
+          label={t('profile.fields.dob')} 
+          value={formData.dob} 
+          onChange={(e) => handleInputChange('dob', e.target.value)} 
+          error={isFieldEmpty(formData.dob)} 
+          type="date" 
+        />
+      </GlassSection>
 
-      <Section title={t('profile.sections.integrations')} icon={CreditCard}>
-        <InputField label={t('profile.fields.revolut')} name="revolutUser" value={formData.revolutUser} onChange={handleInputChange} isFieldEmpty={isFieldEmpty} placeholder={t('profile.placeholders.revolut')} />
-        <InputField label={t('profile.fields.discord')} name="discordId" value={formData.discordId} onChange={handleInputChange} isFieldEmpty={isFieldEmpty} placeholder={t('profile.placeholders.discord')} />
-      </Section>
+      <GlassSection title={t('profile.sections.integrations')} icon={<CreditCard size={18} />}>
+        <Input 
+          label={t('profile.fields.revolut')} 
+          value={formData.revolutUser} 
+          onChange={(e) => handleInputChange('revolutUser', e.target.value)} 
+          error={isFieldEmpty(formData.revolutUser)} 
+          placeholder={t('profile.placeholders.revolut')} 
+        />
+        <Input 
+          label={t('profile.fields.discord')} 
+          value={formData.discordId} 
+          onChange={(e) => handleInputChange('discordId', e.target.value)} 
+          error={isFieldEmpty(formData.discordId)} 
+          placeholder={t('profile.placeholders.discord')} 
+        />
+      </GlassSection>
 
       {/* Save Button */}
       <div className="flex justify-end mb-12">
-        <button 
+        <Button 
           onClick={handleSave}
-          disabled={isSaving}
-          className="group relative px-10 py-3 bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 overflow-hidden"
+          isLoading={isSaving}
+          className="px-10"
         >
-          {isSaving ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            t('common.saveChanges')
-          )}
-        </button>
+          {t('common.saveChanges')}
+        </Button>
       </div>
     </div>
   );

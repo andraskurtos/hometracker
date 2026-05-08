@@ -1,6 +1,7 @@
 import { ShoppingBasket, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import Card from './ui/Card';
 
 export default function Launchpad() {
   const { t } = useTranslation();
@@ -34,18 +35,23 @@ export default function Launchpad() {
             <button
               key={mod.name}
               onClick={() => navigate(mod.path)}
-              className={`group flex flex-col items-center justify-center p-10 rounded-[2.5rem] bg-neutral-900/40 border border-neutral-800/60 backdrop-blur-sm transition-all duration-300 ease-out hover:-translate-y-2 ${mod.bgHover}`}
+              className="group"
             >
-              <div className={`p-5 rounded-2xl bg-neutral-800/50 mb-6 transition-transform duration-300 group-hover:scale-110 ${mod.color}`}>
-                <Icon size={40} strokeWidth={1.5} />
-              </div>
-              
-              <h3 className="text-xl font-bold text-neutral-100 tracking-wide mb-2">
-                {mod.name}
-              </h3>
-              <p className="text-sm text-neutral-500">
-                {mod.description}
-              </p>
+              <Card 
+                hoverable 
+                className={`flex flex-col items-center justify-center p-10 rounded-[2.5rem] transition-all duration-300 ease-out group-hover:-translate-y-2 ${mod.bgHover}`}
+              >
+                <div className={`p-5 rounded-2xl bg-neutral-800/50 mb-6 transition-transform duration-300 group-hover:scale-110 ${mod.color}`}>
+                  <Icon size={40} strokeWidth={1.5} />
+                </div>
+                
+                <h3 className="text-xl font-bold text-neutral-100 tracking-wide mb-2">
+                  {mod.name}
+                </h3>
+                <p className="text-sm text-neutral-500">
+                  {mod.description}
+                </p>
+              </Card>
             </button>
           );
         })}

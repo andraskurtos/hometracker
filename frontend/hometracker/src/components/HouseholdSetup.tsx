@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { Home, UserPlus, ArrowRight, Loader2, Sparkles, LayoutGrid } from 'lucide-react';
+import { Home, UserPlus, ArrowRight, Sparkles, LayoutGrid } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { householdService } from '../services/householdService';
+import Card from './ui/Card';
+import Button from './ui/Button';
+import Input from './ui/Input';
 
 interface HouseholdSetupProps {
   onSuccess: () => void;
@@ -65,7 +68,7 @@ export default function HouseholdSetup({ onSuccess }: HouseholdSetupProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 w-full items-stretch">
         {/* Create Household Card */}
-        <div className="flex flex-col p-10 rounded-[2.5rem] bg-neutral-900/40 border border-neutral-800/60 backdrop-blur-xl relative overflow-hidden group">
+        <Card className="flex flex-col p-10 rounded-[2.5rem] relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-8 text-neutral-800 opacity-20 group-hover:opacity-40 transition-opacity">
             <Sparkles size={120} />
           </div>
@@ -80,28 +83,20 @@ export default function HouseholdSetup({ onSuccess }: HouseholdSetupProps) {
 
             <form onSubmit={handleCreate} className="space-y-6 flex-1 flex flex-col">
               <div className="space-y-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-widest ml-1">{t('household.setup.create.nameLabel')}</label>
-                  <input
-                    type="text"
-                    required
-                    value={createData.name}
-                    onChange={(e) => setCreateData(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-5 py-3.5 bg-neutral-950/50 border border-neutral-800 rounded-2xl text-neutral-200 placeholder-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all"
-                    placeholder={t('household.setup.create.namePlaceholder')}
-                  />
-                </div>
+                <Input
+                  label={t('household.setup.create.nameLabel')}
+                  required
+                  value={createData.name}
+                  onChange={(e) => setCreateData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder={t('household.setup.create.namePlaceholder')}
+                />
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-widest ml-1">{t('household.setup.create.descLabel')}</label>
-                  <input
-                    type="text"
-                    value={createData.description}
-                    onChange={(e) => setCreateData(prev => ({ ...prev, description: e.target.value }))}
-                    className="w-full px-5 py-3.5 bg-neutral-950/50 border border-neutral-800 rounded-2xl text-neutral-200 placeholder-neutral-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all"
-                    placeholder={t('household.setup.create.descPlaceholder')}
-                  />
-                </div>
+                <Input
+                  label={t('household.setup.create.descLabel')}
+                  value={createData.description}
+                  onChange={(e) => setCreateData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder={t('household.setup.create.descPlaceholder')}
+                />
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold text-neutral-500 uppercase tracking-widest ml-1">{t('household.setup.create.currencyLabel')}</label>
@@ -117,23 +112,21 @@ export default function HouseholdSetup({ onSuccess }: HouseholdSetupProps) {
                 </div>
               </div>
 
-              <button
+              <Button
                 type="submit"
-                disabled={!!isLoading || !createData.name}
-                className={`w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center transition-all mt-auto ${
-                  isLoading === 'create' || !createData.name
-                    ? 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
-                    : 'bg-emerald-500 text-neutral-950 hover:bg-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.2)] active:scale-[0.98]'
-                }`}
+                isLoading={isLoading === 'create'}
+                disabled={!createData.name}
+                variant={!createData.name ? 'neutral' : 'primary'}
+                className="w-full py-4 text-lg mt-auto"
               >
-                {isLoading === 'create' ? <Loader2 className="animate-spin" /> : t('household.setup.create.submit')}
-              </button>
+                {t('household.setup.create.submit')}
+              </Button>
             </form>
           </div>
-        </div>
+        </Card>
 
         {/* Join Household Card */}
-        <div className="flex flex-col p-10 rounded-[2.5rem] bg-neutral-900/40 border border-neutral-800/60 backdrop-blur-xl relative overflow-hidden group">
+        <Card className="flex flex-col p-10 rounded-[2.5rem] relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-8 text-neutral-800 opacity-20 group-hover:opacity-40 transition-opacity">
             <UserPlus size={120} />
           </div>
@@ -151,32 +144,28 @@ export default function HouseholdSetup({ onSuccess }: HouseholdSetupProps) {
             </p>
 
             <form onSubmit={handleJoin} className="space-y-6 flex-1 flex flex-col justify-center">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-neutral-500 uppercase tracking-widest ml-1">{t('household.setup.join.codeLabel')}</label>
-                <input
-                  type="text"
-                  required
-                  value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                  className="w-full px-6 py-5 bg-neutral-950/50 border border-neutral-800 rounded-2xl text-center text-3xl font-mono tracking-widest text-emerald-400 placeholder-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 transition-all"
-                  placeholder="XXXX-XXXX"
-                />
-              </div>
+              <Input
+                label={t('household.setup.join.codeLabel')}
+                required
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                placeholder="XXXX-XXXX"
+                className="text-center text-3xl font-mono tracking-widest text-emerald-400 placeholder-neutral-800"
+              />
 
-              <button
+              <Button
                 type="submit"
-                disabled={!!isLoading || !joinCode}
-                className={`w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center transition-all mt-auto ${
-                  isLoading === 'join' || !joinCode
-                    ? 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-500 shadow-[0_0_25px_rgba(37,99,235,0.2)] active:scale-[0.98]'
-                }`}
+                isLoading={isLoading === 'join'}
+                disabled={!joinCode}
+                variant={!joinCode ? 'neutral' : 'secondary'}
+                className="w-full py-4 text-lg mt-auto"
+                icon={<ArrowRight className="ml-2 order-last" size={20} />}
               >
-                {isLoading === 'join' ? <Loader2 className="animate-spin" /> : <>{t('household.setup.join.submit')} <ArrowRight className="ml-2" size={20} /></>}
-              </button>
+                {t('household.setup.join.submit')}
+              </Button>
             </form>
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

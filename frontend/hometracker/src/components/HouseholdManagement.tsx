@@ -1,8 +1,11 @@
-import { Home, Copy, Check, ArrowLeft, Users, Shield, RefreshCw, Pencil, Trash2, UserPlus, Save, Loader2 } from 'lucide-react';
+import { Home, Copy, Check, ArrowLeft, Users, Shield, RefreshCw, Pencil, Trash2, UserPlus, Loader2 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { householdService, type Household, type HouseholdMember } from '../services/householdService';
 import { getAssetUrl } from '../utils/assetUtils';
+import Card from './ui/Card';
+import Button from './ui/Button';
+import Badge from './ui/Badge';
 
 interface HouseholdManagementProps {
   household: Household;
@@ -74,9 +77,9 @@ const EditableHeader = ({
           ) : field === 'description' ? (
             <p className="text-neutral-500">{value || t('household.management.noDescription')}</p>
           ) : (
-            <span className="px-3 py-1 rounded-full bg-neutral-800 border border-neutral-700 text-xs font-medium text-neutral-400">
+            <Badge variant="neutral">
               {value}
-            </span>
+            </Badge>
           )}
           {isAdmin && (
             <button 
@@ -220,7 +223,7 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
       </button>
 
       {/* Household Hero */}
-      <div className="p-8 bg-neutral-900/40 border border-neutral-800/60 rounded-[2.5rem] backdrop-blur-md relative overflow-hidden shadow-xl">
+      <Card className="p-8 rounded-[2.5rem] relative overflow-hidden">
         <div className="absolute top-0 right-0 p-12 text-neutral-800 opacity-10">
           <Home size={160} />
         </div>
@@ -259,9 +262,9 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
               />
               
               <div className="flex flex-wrap gap-3 pt-2">
-                <span className="px-3 py-1 rounded-full bg-neutral-800 border border-neutral-700 text-xs font-medium text-neutral-400 flex items-center gap-1.5">
-                  <Shield size={12} /> {household.role.toUpperCase()}
-                </span>
+                <Badge variant="emerald" icon={<Shield size={12} />}>
+                  {household.role.toUpperCase()}
+                </Badge>
                 <EditableHeader 
                   field="base_currency" 
                   value={household.base_currency} 
@@ -279,21 +282,22 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Join Code Area */}
-      <div className="p-8 bg-neutral-900/40 border border-neutral-800/60 rounded-[2rem] backdrop-blur-md shadow-lg">
+      <Card className="p-8 rounded-[2rem]">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-widest ml-1">{t('household.management.joinCodeTitle')}</h3>
           {isAdmin && (
-            <button 
+            <Button 
+              variant="neutral"
               onClick={handleRegenerateCode}
-              disabled={isRegeneratingCode}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-800 border border-neutral-700 text-xs font-bold text-neutral-400 hover:text-emerald-400 hover:border-emerald-500/50 transition-all"
+              isLoading={isRegeneratingCode}
+              className="px-3 py-1.5 text-xs"
+              icon={<RefreshCw size={14} className={isRegeneratingCode ? 'animate-spin' : ''} />}
             >
-              <RefreshCw size={14} className={isRegeneratingCode ? 'animate-spin' : ''} />
               {t('household.management.regenerateCode')}
-            </button>
+            </Button>
           )}
         </div>
         <div className="flex items-center gap-4 bg-neutral-950/50 p-6 rounded-2xl border border-neutral-800 shadow-inner group overflow-hidden">
@@ -311,7 +315,7 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
         <p className="text-sm text-neutral-500 mt-4 ml-1">
           {t('household.management.joinCodeHelp')}
         </p>
-      </div>
+      </Card>
 
       {/* Members Section */}
       <div className="space-y-6">
@@ -320,9 +324,9 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
             <Users size={20} className="text-neutral-400" />
             <h3 className="text-xl font-bold text-neutral-200">{t('household.management.members')}</h3>
           </div>
-          <span className="px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-xs font-bold text-neutral-500">
+          <Badge variant="neutral" className="px-3 py-1 font-bold">
             {members.length} {t('household.management.totalMembers')}
-          </span>
+          </Badge>
         </div>
 
         <div className="grid grid-cols-1 gap-4">
@@ -333,9 +337,11 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
             </div>
           ) : (
             members.map((member) => (
-              <div 
+              <Card 
                 key={member.id}
-                className="group p-5 bg-neutral-900/40 border border-neutral-800/60 rounded-2xl backdrop-blur-sm flex items-center justify-between transition-all hover:bg-neutral-900/60 hover:border-neutral-700/60 shadow-sm"
+                hoverable
+                padding="none"
+                className="group p-5 flex items-center justify-between"
               >
                 <div className="flex items-center gap-4">
                   <div className="relative">
@@ -361,9 +367,9 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
                     <h4 className="font-bold text-neutral-100 flex items-center gap-2 text-lg">
                       {member.display_name || `${member.first_name} ${member.last_name}`}
                       {member.id === localStorage.getItem('userId') && (
-                        <span className="text-[10px] uppercase tracking-widest font-black px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <Badge variant="emerald" className="text-[10px] uppercase tracking-widest font-black px-1.5 py-0.5 rounded">
                           {t('common.you')}
-                        </span>
+                        </Badge>
                       )}
                     </h4>
                     <p className="text-xs text-neutral-500 font-medium">
@@ -392,7 +398,7 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
                     </button>
                   </div>
                 )}
-              </div>
+              </Card>
             ))
           )}
         </div>

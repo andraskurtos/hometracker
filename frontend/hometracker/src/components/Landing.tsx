@@ -1,5 +1,8 @@
 import { Receipt, Shield, Zap, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import Card from './ui/Card';
+import Button from './ui/Button';
+import Badge from './ui/Badge';
 
 interface LandingProps {
   onLoginClick: () => void;
@@ -11,8 +14,10 @@ export default function Landing({ onLoginClick }: LandingProps) {
   return (
     <div className="w-full max-w-5xl mx-auto flex flex-col items-center justify-center min-h-[80vh] px-6 text-center animate-in fade-in zoom-in-95 duration-1000">
       {/* Hero Badge */}
-      <div className="mb-8 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium tracking-wide">
-        {t('landing.badge')}
+      <div className="mb-8">
+        <Badge variant="emerald" className="px-4 py-1.5 text-sm">
+          {t('landing.badge')}
+        </Badge>
       </div>
 
       {/* Main Logo & Title */}
@@ -28,39 +33,40 @@ export default function Landing({ onLoginClick }: LandingProps) {
       </p>
 
       {/* Primary Action */}
-      <button 
+      <Button 
+        variant="white"
         onClick={onLoginClick}
-        className="group relative flex items-center gap-3 px-10 py-5 bg-neutral-100 text-neutral-950 font-bold text-lg rounded-2xl hover:scale-105 transition-all duration-300 shadow-[0_0_40px_rgba(255,255,255,0.1)] active:scale-95"
+        className="px-10 py-5 text-lg rounded-2xl"
+        icon={<ArrowRight size={22} className="order-last group-hover:translate-x-1 transition-transform" />}
       >
         {t('landing.accessDashboard')}
-        <ArrowRight size={22} className="group-hover:translate-x-1 transition-transform" />
-      </button>
+      </Button>
 
       {/* Features Preview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-24 w-full">
-        <div className="p-8 rounded-3xl bg-neutral-900/40 border border-neutral-800/60 backdrop-blur-sm">
+        <Card hoverable className="text-left">
           <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-6">
-            < Zap size={24} />
+            <Zap size={24} />
           </div>
           <h3 className="text-xl font-bold mb-3">{t('landing.features.ocr.title')}</h3>
           <p className="text-neutral-500">{t('landing.features.ocr.description')}</p>
-        </div>
+        </Card>
 
-        <div className="p-8 rounded-3xl bg-neutral-900/40 border border-neutral-800/60 backdrop-blur-sm">
+        <Card hoverable className="text-left">
           <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 mb-6">
             <Receipt size={24} />
           </div>
           <h3 className="text-xl font-bold mb-3">{t('landing.features.splitting.title')}</h3>
           <p className="text-neutral-500">{t('landing.features.splitting.description')}</p>
-        </div>
+        </Card>
 
-        <div className="p-8 rounded-3xl bg-neutral-900/40 border border-neutral-800/60 backdrop-blur-sm">
+        <Card hoverable className="text-left">
           <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400 mb-6">
             <Shield size={24} />
           </div>
           <h3 className="text-xl font-bold mb-3">{t('landing.features.privacy.title')}</h3>
           <p className="text-neutral-500">{t('landing.features.privacy.description')}</p>
-        </div>
+        </Card>
       </div>
     </div>
   );
