@@ -1,17 +1,23 @@
 import os
 import json
-from dotenv import load_dotenv
+import base64
+import io
 from PIL import Image
-
+from litellm import completion
+from config import MODEL_NAME
 
 class ReceiptReader():
     
     @staticmethod
-    def get_receipt_data(genai, image_file_object):
-        model = genai.GenerativeModel('gemini-2.5-flash-lite')
+    def get_receipt_data(image_file_object):
+        # 1. Open and resize image using PIL
         receipt_image = Image.open(image_file_object)
-        
         receipt_image.thumbnail((1600, 1600))
+        
+        # 2. Convert PIL image to base64
+        buffered = io.BytesIO()
+        receipt_image.save(buffered, format="JPEG")
+        base64_image = base64.b64encode(buffered.getvalue()).decode('utf-8')
 
         prompt = """
         You are an expert data parser and mathematician. I am providing you with an image of a Hungarian grocery receipt. 
@@ -60,18 +66,37 @@ class ReceiptReader():
       ]
     }
     """
-        response = model.generate_content(
-            [prompt, receipt_image],
-            generation_config=genai.GenerationConfig(
-                response_mime_type="application/json",
-                temperature=0.0 
-            )
+        
+        # 3. Call LiteLLM
+        # LiteLLM looks for GEMINI_API_KEY or GOOGLE_API_KEY. 
+        # We'll pass it explicitly from the environment to be safe.
+        api_key = os.environ.get("GEMINI_API_KEY")
+
+        response = completion(
+            model=MODEL_NAME,
+            api_key=api_key,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{base64_image}"
+                            }
+                        }
+                    ]
+                }
+            ],
+            response_format={ "type": "json_object" },
+            temperature=0.0
         )
         
         try:
-            final_data = json.loads(response.text)
-            
+            content = response.choices[0].message.content
+            final_data = json.loads(content)
             return final_data
 
-        except json.JSONDecodeError:
-            raise Exception(f"Parsing failed with response: {response.text}")
+        except (json.JSONDecodeError, AttributeError, IndexError) as e:
+            raise Exception(f"Parsing failed: {str(e)}. Response: {response}")

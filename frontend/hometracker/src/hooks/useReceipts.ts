@@ -1,18 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchReceipts, uploadReceipt } from '../services/receiptService';
+import { receiptService } from '../services/receiptService';
 import { queryKeys } from './queryKeys';
 
-export const useReceipts = () => {
+export const useReceipts = (householdId: string | null) => {
   return useQuery({
-    queryKey: queryKeys.receipts.list(),
-    queryFn: fetchReceipts,
+    queryKey: [...queryKeys.receipts.list(), householdId],
+    queryFn: () => receiptService.fetchReceipts(householdId!),
+    enabled: !!householdId,
   });
 };
 
-export const useUploadReceipt = () => {
+export const useUploadReceipt = (householdId: string | null) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (file: File) => uploadReceipt(file),
+    mutationFn: (file: File) => receiptService.uploadReceipt(householdId!, file),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.receipts.list() });
     },

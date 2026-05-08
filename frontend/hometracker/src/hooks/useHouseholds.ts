@@ -10,7 +10,7 @@ export const useMyHouseholds = (enabled: boolean = true) => {
   });
 };
 
-export const useHouseholdMembers = (householdId: number | null) => {
+export const useHouseholdMembers = (householdId: string | null) => {
   return useQuery({
     queryKey: queryKeys.households.members(householdId!),
     queryFn: () => householdService.getHouseholdMembers(householdId!),
@@ -21,7 +21,7 @@ export const useHouseholdMembers = (householdId: number | null) => {
 export const useUpdateHousehold = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: HouseholdUpdate }) => 
+    mutationFn: ({ id, payload }: { id: string; payload: HouseholdUpdate }) => 
       householdService.updateHousehold(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.households.list() });
@@ -32,7 +32,7 @@ export const useUpdateHousehold = () => {
 export const useRegenerateJoinCode = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => householdService.regenerateJoinCode(id),
+    mutationFn: (id: string) => householdService.regenerateJoinCode(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.households.list() });
     },
@@ -49,7 +49,7 @@ export const useJoinHousehold = () => {
   });
 };
 
-export const usePromoteMember = (householdId: number) => {
+export const usePromoteMember = (householdId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (userId: string) => householdService.promoteMember(householdId, userId),
@@ -59,7 +59,7 @@ export const usePromoteMember = (householdId: number) => {
   });
 };
 
-export const useKickMember = (householdId: number) => {
+export const useKickMember = (householdId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (userId: string) => householdService.kickMember(householdId, userId),
@@ -74,8 +74,9 @@ export const useCreateHousehold = () => {
   return useMutation({
     mutationFn: ({ name, description, baseCurrency }: { name: string; description?: string; baseCurrency?: string }) => 
       householdService.createHousehold(name, description, baseCurrency),
-    onSuccess: () => {
+    onSuccess: (newHousehold) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.households.list() });
+      return newHousehold;
     },
   });
 };
@@ -83,7 +84,7 @@ export const useCreateHousehold = () => {
 export const useDeactivateHousehold = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => householdService.deactivateHousehold(id),
+    mutationFn: (id: string) => householdService.deactivateHousehold(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.households.list() });
     },

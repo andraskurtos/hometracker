@@ -1,7 +1,8 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from config import DB_CONFIG, logger, genai
+from routers.auth import get_current_user_id
+from config import DB_CONFIG, logger
 from receipt_reader import ReceiptReader as reader
 
 router = APIRouter(
@@ -10,21 +11,30 @@ router = APIRouter(
 )
 
 @router.post("/parse")
-async def parse_receipt_endpoint(file: UploadFile = File(...)):
+async def parse_receipt(
+                        household_id: str,
+                        file: UploadFile = File(...),
+                        user_id: str=Depends(get_current_user_id)
+                        ):
+    
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image.")
 
     conn = None
     cur = None
     try:
-        logger.info("Sending request")
+        logger.info(f"Processing receipt for household {household_id} by user {user_id}")
         # 1. Get the JSON from Gemini
-        parsed_data = reader.get_receipt_data(genai, file.file)
+        parsed_data = reader.get_receipt_data(file.file)
         logger.info("request processed")
         # 2. Connect to the database
         conn = psycopg2.connect(**DB_CONFIG)
         cur = conn.cursor()
         # --- DATABASE INSERTION PIPELINE ---
+        
+        cur.execute("SELECT 1 FROM household_members WHERE household_id = %s AND user_id = %s", (household_id, user_id))
+        if not cur.fetchone():
+            raise HTTPException(status_code=403, detail="You are not a member of this household")  
         
         # Step A: UPSERT STORE
         # If the store exists, DO UPDATE just sets the name to itself so we can use RETURNING id.
@@ -38,13 +48,14 @@ async def parse_receipt_endpoint(file: UploadFile = File(...)):
 
         # Step B: INSERT RECEIPT
         cur.execute("""
-            INSERT INTO receipts (store_id, total, payment_method)
-            VALUES (%s, %s, %s)
+            INSERT INTO receipts (store_id, total, payment_method, household_id)
+            VALUES (%s, %s, %s, %s)
             RETURNING id;
         """, (
             store_id, 
             parsed_data["receipt"]["total_amount"], 
-            parsed_data["receipt"]["payment_method"]
+            parsed_data["receipt"]["payment_method"],
+            household_id
         ))
         receipt_id = cur.fetchone()[0]
 
@@ -72,10 +83,14 @@ async def parse_receipt_endpoint(file: UploadFile = File(...)):
             cur.execute("""
                 INSERT INTO receipt_items (receipt_id, item_id, quantity, price_paid)
                 VALUES (%s, %s, %s, %s)
-                ON CONFLICT (receipt_id, item_id) DO UPDATE SET
-                    quantity = receipt_items.quantity + EXCLUDED.quantity,
-                    price_paid = receipt_items.price_paid + EXCLUDED.price_paid;
+                RETURNING id;
             """, (receipt_id, item_id, item["quantity"], item["price_paid"]))
+            
+            receipt_item_id = cur.fetchone()[0]
+            cur.execute("""
+                            INSERT INTO item_owners (receipt_item_id, user_id, percentage)
+                            VALUES (%s, %s, 100.00);
+                        """, (receipt_item_id, user_id))
             
         # --- END PIPELINE ---
         
@@ -85,34 +100,37 @@ async def parse_receipt_endpoint(file: UploadFile = File(...)):
         
         return {
             "status": "success",
-            "message": f"Saved receipt {receipt_id} from store ID {store_id} with {len(parsed_data['items'])} items.",
+            "message": f"Saved receipt {receipt_id} to household {household_id}",
             "data": parsed_data
         }
 
     except Exception as e:
-        # If ANYTHING fails (Gemini parsing, DB constraints, missing data), 
-        # rollback the entire transaction so we don't get partial data in the DB.
         if conn:
             conn.rollback()
+            logger.error(f"Error parsing receipt: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if conn:
-            conn.close()
+            if cur: cur.close()
+            if conn: conn.close()
             
-@router.get("/")
-def get_all_receipts():
+@router.get("/{household_id}")
+def get_household_receipts(household_id: str, user_id: str = Depends(get_current_user_id)):
     """
-    Retrieves all receipts from the database, perfectly formatted as JSON, 
-    including the store details and all individual items.
+    Retrieves all receipts for a specific household, including items and ownership shares.
     """
     conn = None
     cur = None
     try:
         conn = psycopg2.connect(**DB_CONFIG)
-        # RealDictCursor makes the rows behave like JSON objects!
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # 1. Fetch all receipts and join the Store name
+        # Verify membership
+        cur.execute("SELECT 1 FROM household_members WHERE household_id = %s AND user_id = %s", (household_id, user_id))
+        if not cur.fetchone():
+            raise HTTPException(status_code=403, detail="You are not a member of this household")
+
+        # 1. Fetch all receipts for the household
         cur.execute("""
             SELECT 
                 r.id as receipt_id, 
@@ -122,62 +140,69 @@ def get_all_receipts():
                 s.name as store_name
             FROM receipts r
             JOIN stores s ON r.store_id = s.id
+            WHERE r.household_id = %s
             ORDER BY r.created_at DESC;
-        """)
+        """, (household_id,))
         receipts_data = cur.fetchall()
         
-        # 2. Fetch ALL items for ALL receipts
+        # 2. Fetch items and their owners for the household's receipts
         cur.execute("""
             SELECT 
                 ri.receipt_id,
+                ri.id,
                 i.receipt_name,
                 i.name,
                 i.size,
                 i.size_type,
                 ri.quantity,
-                ri.price_paid
+                ri.price_paid,
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'id', io.user_id,
+                            'percentage', io.percentage
+                        )
+                    ) FILTER (WHERE io.id IS NOT NULL),
+                    '[]'
+                ) as owners
             FROM receipt_items ri
-            JOIN items i ON ri.item_id = i.id;
-        """)
+            JOIN items i ON ri.item_id = i.id
+            JOIN receipts r ON ri.receipt_id = r.id
+            LEFT JOIN item_owners io ON ri.id = io.receipt_item_id
+            WHERE r.household_id = %s
+            GROUP BY ri.id, i.id;
+        """, (household_id,))
         all_items = cur.fetchall()
         
-        # 3. Assemble the JSON payload (Stitch items to their receipts)
-        # We create a dictionary to group items by their receipt_id
         items_by_receipt = {}
         for item in all_items:
             r_id = item["receipt_id"]
             if r_id not in items_by_receipt:
                 items_by_receipt[r_id] = []
             
-            # Remove the receipt_id from the item dict before sending to frontend
             item_data = dict(item)
             del item_data["receipt_id"]
             items_by_receipt[r_id].append(item_data)
         
-        # 4. Format the final output list
         final_output = []
         for receipt in receipts_data:
             r_id = receipt["receipt_id"]
-            
-            formatted_receipt = {
+            final_output.append({
                 "id": r_id,
-                "store": {
-                    "name": receipt["store_name"]
-                },
+                "store": {"name": receipt["store_name"]},
                 "total_amount": receipt["total_amount"],
                 "payment_method": receipt["payment_method"],
-                "created_at": receipt["created_at"].isoformat(), # Format dates for JSON
-                "items": items_by_receipt.get(r_id, []) # Attach the items array
-            }
-            final_output.append(formatted_receipt)
+                "created_at": receipt["created_at"].isoformat(),
+                "items": items_by_receipt.get(r_id, [])
+            })
 
         return {
             "status": "success",
-            "count": len(final_output),
             "data": final_output
         }
 
     except Exception as e:
+        logger.error(f"Error fetching receipts: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if conn:

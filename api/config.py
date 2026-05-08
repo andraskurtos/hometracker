@@ -1,6 +1,5 @@
 import os
 import logging
-import google.generativeai as genai
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -22,11 +21,10 @@ DB_CONFIG = {
     "port": "5432"
 }
 
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-
 SECRET_KEY = os.environ.get("JWT_KEY")
 ALGORITHM="HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES=60*24*7
+MODEL_NAME = os.environ.get("LLM_MODEL")
 
 UPLOAD_DIR = os.environ.get("UPLOAD_DIR")
 os.makedirs(UPLOAD_DIR, exist_ok=True)

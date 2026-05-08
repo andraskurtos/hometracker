@@ -5,15 +5,20 @@ import { type UIReceipt } from '../services/receiptService';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { useReceipts, useUploadReceipt } from '../hooks/useReceipts';
+import { useHouseholdMembers } from '../hooks/useHouseholds';
+import { getAssetUrl } from '../utils/assetUtils';
 
-const AVAILABLE_USERS: number[] = [1, 2, 3];
+interface ReceiptSplitterProps {
+  householdId: string | null;
+}
 
-export default function ReceiptSplitter(): JSX.Element {
+export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): JSX.Element {
   const { t } = useTranslation();
   
   // --- QUERIES & MUTATIONS ---
-  const { data: serverReceipts = [], isLoading: isLoadingReceipts } = useReceipts();
-  const uploadMutation = useUploadReceipt();
+  const { data: serverReceipts, isLoading: isLoadingReceipts } = useReceipts(householdId);
+  const { data: members = [] } = useHouseholdMembers(householdId);
+  const uploadMutation = useUploadReceipt(householdId);
 
   // --- LOCAL STATE FOR OPTIMISTIC UI / INTERACTION ---
   const [receipts, setReceipts] = useState<UIReceipt[]>([]);
@@ -26,11 +31,11 @@ export default function ReceiptSplitter(): JSX.Element {
 
   // Sync local receipts state with server data
   useEffect(() => {
-    if (serverReceipts.length > 0) {
+    if (serverReceipts) {
       setReceipts(serverReceipts);
       
       // Automatically expand the newest receipt if none are expanded
-      if (expandedIds.size === 0) {
+      if (expandedIds.size === 0 && serverReceipts.length > 0) {
         setExpandedIds(new Set([serverReceipts[0].id]));
       }
     }
@@ -46,7 +51,7 @@ export default function ReceiptSplitter(): JSX.Element {
     });
   };
 
-  const toggleRecipient = (receiptId: number, itemId: string, userId: number): void => {
+  const toggleOwner = (receiptId: number, itemId: number, userId: string): void => {
     setReceipts(prevReceipts => 
       prevReceipts.map(receipt => {
         if (receipt.id !== receiptId) return receipt;
@@ -54,16 +59,17 @@ export default function ReceiptSplitter(): JSX.Element {
           ...receipt,
           items: receipt.items.map(item => {
             if (item.id !== itemId) return item;
-            const hasUser = item.recipients.includes(userId);
-            const newRecipients = hasUser
-              ? item.recipients.filter(id => id !== userId) 
-              : [...item.recipients, userId];               
-            return { ...item, recipients: newRecipients };
+            const hasUser = item.owners.includes(userId);
+            const newOwners = hasUser
+              ? item.owners.filter(id => id !== userId) 
+              : [...item.owners, userId];               
+            return { ...item, owners: newOwners };
           })
         };
       })
     );
-    // TODO: Persistence for recipients assignment in the future
+    // TODO: Call API to persist the split change
+    // For now it's just local optimistic update
   };
 
   // --- UPLOAD LOGIC ---
@@ -74,7 +80,7 @@ export default function ReceiptSplitter(): JSX.Element {
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile || !householdId) return;
     
     try {
       await uploadMutation.mutateAsync(selectedFile);
@@ -170,23 +176,35 @@ export default function ReceiptSplitter(): JSX.Element {
                                 {item.qty} <span className="text-[10px] opacity-60 ml-0.5">{item.size !== '-' ? item.size : ''}</span>
                               </td>
                               <td className="py-4">
-                                <div className="flex items-center justify-center gap-1.5">
-                                  {AVAILABLE_USERS.map(userId => (
-                                    <button
-                                      key={userId}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        toggleRecipient(receipt.id, item.id, userId);
-                                      }}
-                                      className={`w-7 h-7 rounded-lg text-[10px] font-black transition-all flex items-center justify-center border ${
-                                        item.recipients.includes(userId)
-                                          ? 'bg-emerald-500 text-neutral-950 border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
-                                          : 'bg-neutral-800 text-neutral-500 border-neutral-700 hover:border-neutral-500'
-                                      }`}
+                                <div className="flex items-center justify-center -space-x-3 group/stack cursor-pointer">
+                                  {members.filter(m => item.owners.includes(m.id)).slice(0, 3).map((member, idx) => (
+                                    <div
+                                      key={member.id}
+                                      className="relative w-8 h-8 rounded-full border-2 border-neutral-900 overflow-hidden bg-neutral-800 transition-transform group-hover/stack:translate-x-1"
+                                      style={{ zIndex: 10 - idx }}
+                                      title={member.display_name || `${member.first_name} ${member.last_name}`}
                                     >
-                                      U{userId}
-                                    </button>
+                                      {member.profile_pic_url ? (
+                                        <img src={getAssetUrl(member.profile_pic_url)!} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-neutral-400">
+                                          {member.first_name[0]}{member.last_name[0]}
+                                        </div>
+                                      )}
+                                    </div>
                                   ))}
+                                  {item.owners.length > 3 && (
+                                    <div 
+                                      className="w-8 h-8 rounded-full border-2 border-neutral-900 bg-neutral-800 flex items-center justify-center text-[10px] font-bold text-neutral-400 relative z-0 transition-transform group-hover/stack:translate-x-1"
+                                    >
+                                      +{item.owners.length - 3}
+                                    </div>
+                                  )}
+                                  {item.owners.length === 0 && (
+                                    <div className="w-8 h-8 rounded-full border-2 border-dashed border-neutral-800 flex items-center justify-center text-neutral-600">
+                                      <Plus size={14} />
+                                    </div>
+                                  )}
                                 </div>
                               </td>
                               <td className="py-4 text-right font-bold text-neutral-200">

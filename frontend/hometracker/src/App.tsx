@@ -25,7 +25,7 @@ const ProtectedRoute = ({ children, isAuthenticated }: { children: JSX.Element, 
 function App() {
   const { t } = useTranslation();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!localStorage.getItem('token'));
-  const [activeHouseholdId, setActiveHouseholdId] = useState<number | null>(null);
+  const [activeHouseholdId, setActiveHouseholdId] = useState<string | null>(null);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -148,7 +148,7 @@ function App() {
                   onClick={() => navigate('/')}
                   label={t('common.backToDashboard')}
                 />
-                <ReceiptSplitter />
+                <ReceiptSplitter householdId={activeHousehold?.id || null} />
               </div>
             </ProtectedRoute>
           } />
@@ -169,7 +169,7 @@ function App() {
 
           <Route path="/setup-household" element={
             <ProtectedRoute isAuthenticated={isAuthenticated}>
-              <HouseholdSetup onSuccess={(id) => {
+              <HouseholdSetup onSuccess={(id: string) => {
                 refetchHouseholds();
                 setActiveHouseholdId(id);
                 navigate('/');

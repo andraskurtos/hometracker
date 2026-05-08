@@ -16,7 +16,7 @@ const getHeaders = (includeAuth = true) => {
 };
 
 export interface Household {
-    id: number;
+    id: string;
     name: string;
     description: string | null;
     join_code: string;
@@ -81,7 +81,7 @@ export const householdService = {
         return data;
     },
 
-    getHouseholdMembers: async (householdId: number): Promise<HouseholdMember[]> => {
+    getHouseholdMembers: async (householdId: string): Promise<HouseholdMember[]> => {
         const response = await fetch(`${API_BASE_URL}/household/${householdId}/members`, {
             headers: getHeaders(),
         });
@@ -91,7 +91,7 @@ export const householdService = {
         return data;
     },
 
-    updateHousehold: async (householdId: number, payload: { name?: string, description?: string, base_currency?: string }) => {
+    updateHousehold: async (householdId: string, payload: { name?: string, description?: string, base_currency?: string }) => {
         const response = await fetch(`${API_BASE_URL}/household/${householdId}`, {
             method: 'PUT',
             headers: getHeaders(),
@@ -103,7 +103,7 @@ export const householdService = {
         return data;
     },
 
-    regenerateJoinCode: async (householdId: number) => {
+    regenerateJoinCode: async (householdId: string) => {
         const response = await fetch(`${API_BASE_URL}/household/${householdId}/regenerate-code`, {
             method: 'PUT',
             headers: getHeaders(),
@@ -114,7 +114,7 @@ export const householdService = {
         return data.new_code;
     },
 
-    promoteMember: async (householdId: number, userId: string) => {
+    promoteMember: async (householdId: string, userId: string) => {
         const response = await fetch(`${API_BASE_URL}/household/${householdId}/promote/${userId}`, {
             method: 'PUT',
             headers: getHeaders(),
@@ -125,7 +125,7 @@ export const householdService = {
         return data;
     },
 
-    kickMember: async (householdId: number, userId: string) => {
+    kickMember: async (householdId: string, userId: string) => {
         const response = await fetch(`${API_BASE_URL}/household/${householdId}/deactivate/${userId}`, {
             method: 'PUT',
             headers: getHeaders(),
@@ -136,7 +136,7 @@ export const householdService = {
         return data;
     },
 
-    deactivateHousehold: async (householdId: number) => {
+    deactivateHousehold: async (householdId: string) => {
         const response = await fetch(`${API_BASE_URL}/household/${householdId}/deactivate`, {
             method: 'PUT',
             headers: getHeaders(),
