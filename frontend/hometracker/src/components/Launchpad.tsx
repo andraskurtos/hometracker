@@ -1,30 +1,44 @@
-// src/components/Launchpad.jsx
-import { Receipt, Calendar, Home, CheckSquare, ShoppingCart, Settings, ShoppingBag, ShoppingBasket } from 'lucide-react';
+import { ShoppingBasket, Home } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Launchpad() {
-  // Define our modules here. Each gets a distinct color accent.
+  const navigate = useNavigate();
+
   const modules = [
-    { name: 'Groceries', description: 'Track shopping', icon: ShoppingBasket, color: 'text-emerald-400', bgHover: 'hover:border-emerald-500/50 hover:shadow-[0_0_15px_rgba(16,185,129,0.15)]' }
+    { 
+      name: 'Groceries', 
+      description: 'Track shopping', 
+      icon: ShoppingBasket, 
+      color: 'text-emerald-400', 
+      bgHover: 'hover:border-emerald-500/50 hover:shadow-[0_0_15px_rgba(16,185,129,0.15)]',
+      path: '/groceries'
+    },
+    { 
+      name: 'Household', 
+      description: 'Manage members', 
+      icon: Home, 
+      color: 'text-blue-400', 
+      bgHover: 'hover:border-blue-500/50 hover:shadow-[0_0_15px_rgba(37,99,235,0.15)]',
+      path: '/household'
+    }
   ];
 
   return (
-    <div className="w-full max-w-5xl mx-auto mt-8">
-      {/* CSS Grid: 1 column on mobile, 2 on tablets, 3 on desktops */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="w-full max-w-4xl mx-auto mt-8 flex justify-center">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 w-full max-w-2xl">
         {modules.map((mod) => {
           const Icon = mod.icon;
           return (
             <button
               key={mod.name}
-              className={`group flex flex-col items-center justify-center p-8 rounded-2xl bg-neutral-900/40 border border-neutral-800/60 backdrop-blur-sm transition-all duration-300 ease-out hover:-translate-y-1 ${mod.bgHover}`}
+              onClick={() => navigate(mod.path)}
+              className={`group flex flex-col items-center justify-center p-10 rounded-[2.5rem] bg-neutral-900/40 border border-neutral-800/60 backdrop-blur-sm transition-all duration-300 ease-out hover:-translate-y-2 ${mod.bgHover}`}
             >
-              {/* Icon Container with a subtle background glow on hover */}
-              <div className={`p-4 rounded-full bg-neutral-800/50 mb-4 transition-transform duration-300 group-hover:scale-110 ${mod.color}`}>
-                <Icon size={32} strokeWidth={1.5} />
+              <div className={`p-5 rounded-2xl bg-neutral-800/50 mb-6 transition-transform duration-300 group-hover:scale-110 ${mod.color}`}>
+                <Icon size={40} strokeWidth={1.5} />
               </div>
               
-              {/* Text Content */}
-              <h3 className="text-lg font-semibold text-neutral-200 tracking-wide mb-1">
+              <h3 className="text-xl font-bold text-neutral-100 tracking-wide mb-2">
                 {mod.name}
               </h3>
               <p className="text-sm text-neutral-500">
