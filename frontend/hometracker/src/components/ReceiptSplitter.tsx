@@ -1,41 +1,40 @@
 import React, { useState, useEffect, useRef, type JSX } from 'react';
 import { ChevronDown, Plus, Upload, X, FileImage, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { fetchReceipts, uploadReceipt, type UIReceipt } from '../services/receiptService';
+import { type UIReceipt } from '../services/receiptService';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { useReceipts, useUploadReceipt } from '../hooks/useReceipts';
 
 const AVAILABLE_USERS: number[] = [1, 2, 3];
 
 export default function ReceiptSplitter(): JSX.Element {
   const { t } = useTranslation();
-  // --- EXISTING STATE ---
+  
+  // --- QUERIES & MUTATIONS ---
+  const { data: serverReceipts = [], isLoading: isLoadingReceipts } = useReceipts();
+  const uploadMutation = useUploadReceipt();
+
+  // --- LOCAL STATE FOR OPTIMISTIC UI / INTERACTION ---
   const [receipts, setReceipts] = useState<UIReceipt[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
 
   // --- NEW UPLOAD STATE ---
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // --- DATA LOADING ---
-  const loadData = async () => {
-    setIsLoading(true);
-    const data = await fetchReceipts();
-    setReceipts(data);
-    
-    // Automatically expand the newest receipt
-    if (data.length > 0) {
-      setExpandedIds(new Set([data[0].id]));
-    }
-    setIsLoading(false);
-  };
-
+  // Sync local receipts state with server data
   useEffect(() => {
-    loadData();
-  }, []);
+    if (serverReceipts.length > 0) {
+      setReceipts(serverReceipts);
+      
+      // Automatically expand the newest receipt if none are expanded
+      if (expandedIds.size === 0) {
+        setExpandedIds(new Set([serverReceipts[0].id]));
+      }
+    }
+  }, [serverReceipts]);
 
   // --- UI INTERACTION LOGIC ---
   const toggleAccordion = (id: number): void => {
@@ -64,6 +63,7 @@ export default function ReceiptSplitter(): JSX.Element {
         };
       })
     );
+    // TODO: Persistence for recipients assignment in the future
   };
 
   // --- UPLOAD LOGIC ---
@@ -76,21 +76,17 @@ export default function ReceiptSplitter(): JSX.Element {
   const handleUpload = async () => {
     if (!selectedFile) return;
     
-    setIsUploading(true);
     try {
-      await uploadReceipt(selectedFile);
-      // Success! Close modal, clear file, refresh data.
+      await uploadMutation.mutateAsync(selectedFile);
+      // Success! Close modal, clear file.
       setIsModalOpen(false);
       setSelectedFile(null);
-      await loadData(); 
     } catch (error) {
       alert(t('groceries.errors.uploadFailed'));
-    } finally {
-      setIsUploading(false);
     }
   };
 
-  if (isLoading && receipts.length === 0) {
+  if (isLoadingReceipts && receipts.length === 0) {
     return (
       <div className="w-full h-64 flex flex-col items-center justify-center text-emerald-500">
         <Loader2 className="w-10 h-10 animate-spin mb-4" />
@@ -135,14 +131,13 @@ export default function ReceiptSplitter(): JSX.Element {
                     <FileImage size={24} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-neutral-100">{receipt.store_name}</h3>
-                    <p className="text-sm text-neutral-500">{new Date(receipt.date).toLocaleDateString()}</p>
+                    <h3 className="font-bold text-neutral-100">{receipt.storeName}</h3>
+                    <p className="text-sm text-neutral-500">{receipt.date}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-6">
                   <div className="text-right">
-                    <p className="text-xs uppercase tracking-widest text-neutral-600 font-bold">{receipt.currency}</p>
-                    <p className="text-xl font-black text-emerald-400">{receipt.total.toLocaleString()}</p>
+                    <p className="text-xl font-black text-emerald-400">{receipt.items.reduce((sum, item) => sum + item.price * item.qty, 0).toLocaleString()}</p>
                   </div>
                   <ChevronDown 
                     className={`text-neutral-600 transition-transform duration-300 ${expandedIds.has(receipt.id) ? 'rotate-180' : ''}`} 
@@ -172,14 +167,17 @@ export default function ReceiptSplitter(): JSX.Element {
                             <tr key={item.id} className="group hover:bg-neutral-800/20 transition-colors">
                               <td className="py-4 font-medium text-neutral-300">{item.name}</td>
                               <td className="py-4 text-neutral-500">
-                                {item.quantity} <span className="text-[10px] opacity-60 ml-0.5">{item.unit || ''}</span>
+                                {item.qty} <span className="text-[10px] opacity-60 ml-0.5">{item.size !== '-' ? item.size : ''}</span>
                               </td>
                               <td className="py-4">
                                 <div className="flex items-center justify-center gap-1.5">
                                   {AVAILABLE_USERS.map(userId => (
                                     <button
                                       key={userId}
-                                      onClick={() => toggleRecipient(receipt.id, item.id, userId)}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleRecipient(receipt.id, item.id, userId);
+                                      }}
                                       className={`w-7 h-7 rounded-lg text-[10px] font-black transition-all flex items-center justify-center border ${
                                         item.recipients.includes(userId)
                                           ? 'bg-emerald-500 text-neutral-950 border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
@@ -192,7 +190,7 @@ export default function ReceiptSplitter(): JSX.Element {
                                 </div>
                               </td>
                               <td className="py-4 text-right font-bold text-neutral-200">
-                                {item.total_price.toLocaleString()}
+                                {item.price.toLocaleString()}
                               </td>
                             </tr>
                           ))}
@@ -259,10 +257,10 @@ export default function ReceiptSplitter(): JSX.Element {
                 variant="emerald"
                 className="flex-1"
                 onClick={handleUpload}
-                isLoading={isUploading}
+                isLoading={uploadMutation.isPending}
                 disabled={!selectedFile}
               >
-                {isUploading ? t('groceries.modal.analyzing') : t('groceries.modal.submit')}
+                {uploadMutation.isPending ? t('groceries.modal.analyzing') : t('groceries.modal.submit')}
               </Button>
             </div>
           </Card>

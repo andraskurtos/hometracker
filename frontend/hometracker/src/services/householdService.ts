@@ -35,6 +35,12 @@ export interface HouseholdMember {
     joined_at: string;
 }
 
+export interface HouseholdUpdate {
+    name?: string;
+    description?: string;
+    base_currency?: string;
+}
+
 export const householdService = {
     createHousehold: async (name: string, description?: string, baseCurrency: string = "HUF") => {
         const response = await fetch(`${API_BASE_URL}/household/`, {

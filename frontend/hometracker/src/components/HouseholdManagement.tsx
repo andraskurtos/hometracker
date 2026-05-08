@@ -1,11 +1,18 @@
 import { Home, Copy, Check, ArrowLeft, Users, Shield, RefreshCw, Pencil, Trash2, UserPlus, Loader2 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { householdService, type Household, type HouseholdMember } from '../services/householdService';
+import { type Household } from '../services/householdService';
 import { getAssetUrl } from '../utils/assetUtils';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
+import { 
+  useHouseholdMembers, 
+  useUpdateHousehold, 
+  useRegenerateJoinCode, 
+  useKickMember, 
+  usePromoteMember 
+} from '../hooks/useHouseholds';
 
 interface HouseholdManagementProps {
   household: Household;
@@ -97,11 +104,15 @@ const EditableHeader = ({
 
 export default function HouseholdManagement({ household, onBack, onUpdate }: HouseholdManagementProps) {
   const { t } = useTranslation();
-  const [members, setMembers] = useState<HouseholdMember[]>([]);
-  const [isLoadingMembers, setIsLoadingMembers] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [isRegeneratingCode, setIsRegeneratingCode] = useState(false);
   
+  // Queries & Mutations
+  const { data: members = [], isLoading: isLoadingMembers } = useHouseholdMembers(household.id);
+  const updateMutation = useUpdateHousehold();
+  const regenerateCodeMutation = useRegenerateJoinCode();
+  const kickMutation = useKickMember(household.id);
+  const promoteMutation = usePromoteMember(household.id);
+
   // Editing state
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<any>({
@@ -109,7 +120,6 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
     description: household.description || '',
     base_currency: household.base_currency
   });
-  const [isSaving, setIsSaving] = useState(false);
 
   // Sync state when household prop changes
   useEffect(() => {
@@ -122,22 +132,6 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
 
   const isAdmin = household.role === 'admin';
 
-  const loadMembers = useCallback(async () => {
-    setIsLoadingMembers(true);
-    try {
-      const data = await householdService.getHouseholdMembers(household.id);
-      setMembers(data);
-    } catch (err) {
-      console.error("Failed to load members", err);
-    } finally {
-      setIsLoadingMembers(false);
-    }
-  }, [household.id]);
-
-  useEffect(() => {
-    loadMembers();
-  }, [loadMembers]);
-
   const copyToClipboard = () => {
     navigator.clipboard.writeText(household.join_code);
     setCopied(true);
@@ -146,19 +140,16 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
 
   const handleRegenerateCode = async () => {
     if (!window.confirm(t('household.management.confirmRegenerate'))) return;
-    setIsRegeneratingCode(true);
     try {
-      await householdService.regenerateJoinCode(household.id);
+      await regenerateCodeMutation.mutateAsync(household.id);
       onUpdate();
     } catch (err) {
       alert(t('household.management.errors.regenerateFailed'));
-    } finally {
-      setIsRegeneratingCode(false);
     }
   };
 
   const handleUpdateField = async (field: string) => {
-    if (isSaving || editingField !== field) return;
+    if (updateMutation.isPending || editingField !== field) return;
 
     const newValue = editValues[field];
     const oldValue = (household as any)[field] || '';
@@ -168,14 +159,13 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
       return;
     }
 
-    setIsSaving(true);
     try {
-      await householdService.updateHousehold(household.id, { [field]: newValue });
+      await updateMutation.mutateAsync({ 
+        id: household.id, 
+        payload: { [field]: newValue } 
+      });
       setEditingField(null);
-      // Safety check: ensure onUpdate is a function
-      if (typeof onUpdate === 'function') {
-        await onUpdate();
-      }
+      onUpdate();
     } catch (err) {
       console.error("Household update failed:", err);
       alert(t('household.management.errors.updateFailed'));
@@ -186,16 +176,13 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
         base_currency: household.base_currency
       });
       setEditingField(null);
-    } finally {
-      setIsSaving(false);
     }
   };
 
   const handleKick = async (userId: string) => {
     if (!window.confirm(t('household.management.confirmKick'))) return;
     try {
-      await householdService.kickMember(household.id, userId);
-      loadMembers();
+      await kickMutation.mutateAsync(userId);
     } catch (err: any) {
       alert(err.message);
     }
@@ -204,8 +191,7 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
   const handlePromote = async (userId: string) => {
     if (!window.confirm(t('household.management.confirmPromote'))) return;
     try {
-      await householdService.promoteMember(household.id, userId);
-      loadMembers();
+      await promoteMutation.mutateAsync(userId);
     } catch (err: any) {
       alert(err.message);
     }
@@ -238,7 +224,7 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
                 field="name" 
                 value={household.name} 
                 isEditing={editingField === 'name'}
-                isSaving={isSaving}
+                isSaving={updateMutation.isPending}
                 editValue={editValues.name}
                 isAdmin={isAdmin}
                 onEdit={setEditingField}
@@ -251,7 +237,7 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
                 field="description" 
                 value={household.description} 
                 isEditing={editingField === 'description'}
-                isSaving={isSaving}
+                isSaving={updateMutation.isPending}
                 editValue={editValues.description}
                 isAdmin={isAdmin}
                 onEdit={setEditingField}
@@ -269,7 +255,7 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
                   field="base_currency" 
                   value={household.base_currency} 
                   isEditing={editingField === 'base_currency'}
-                  isSaving={isSaving}
+                  isSaving={updateMutation.isPending}
                   editValue={editValues.base_currency}
                   isAdmin={isAdmin}
                   onEdit={setEditingField}
@@ -292,9 +278,9 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
             <Button 
               variant="neutral"
               onClick={handleRegenerateCode}
-              isLoading={isRegeneratingCode}
+              isLoading={regenerateCodeMutation.isPending}
               className="px-3 py-1.5 text-xs"
-              icon={<RefreshCw size={14} className={isRegeneratingCode ? 'animate-spin' : ''} />}
+              icon={<RefreshCw size={14} className={regenerateCodeMutation.isPending ? 'animate-spin' : ''} />}
             >
               {t('household.management.regenerateCode')}
             </Button>
@@ -336,7 +322,7 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
               <p>{t('common.loading')}</p>
             </div>
           ) : (
-            members.map((member) => (
+            members.map((member: any) => (
               <Card 
                 key={member.id}
                 hoverable
@@ -386,7 +372,7 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
                         className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white transition-all"
                         title={t('household.management.promote')}
                       >
-                        <UserPlus size={18} />
+                        {promoteMutation.isPending && promoteMutation.variables === member.id ? <Loader2 size={18} className="animate-spin" /> : <UserPlus size={18} />}
                       </button>
                     )}
                     <button 
@@ -394,7 +380,7 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
                       className="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all"
                       title={t('household.management.kick')}
                     >
-                      <Trash2 size={18} />
+                      {kickMutation.isPending && kickMutation.variables === member.id ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
                     </button>
                   </div>
                 )}

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Home, UserPlus, ArrowRight, Sparkles, LayoutGrid } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { householdService } from '../services/householdService';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
+import { useCreateHousehold, useJoinHousehold } from '../hooks/useHouseholds';
 
 interface HouseholdSetupProps {
   onSuccess: () => void;
@@ -14,34 +14,34 @@ export default function HouseholdSetup({ onSuccess }: HouseholdSetupProps) {
   const { t } = useTranslation();
   const [createData, setCreateData] = useState({ name: '', description: '', baseCurrency: 'HUF' });
   const [joinCode, setJoinCode] = useState('');
-  const [isLoading, setIsLoading] = useState<'create' | 'join' | null>(null);
   const [error, setError] = useState('');
+
+  const createMutation = useCreateHousehold();
+  const joinMutation = useJoinHousehold();
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading('create');
     setError('');
     try {
-      await householdService.createHousehold(createData.name, createData.description, createData.baseCurrency);
+      await createMutation.mutateAsync({ 
+        name: createData.name, 
+        description: createData.description, 
+        baseCurrency: createData.baseCurrency 
+      });
       onSuccess();
     } catch (err: any) {
       setError(err.message);
-    } finally {
-      setIsLoading(null);
     }
   };
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading('join');
     setError('');
     try {
-      await householdService.joinHousehold(joinCode);
+      await joinMutation.mutateAsync(joinCode);
       onSuccess();
     } catch (err: any) {
       setError(err.message);
-    } finally {
-      setIsLoading(null);
     }
   };
 
@@ -114,7 +114,7 @@ export default function HouseholdSetup({ onSuccess }: HouseholdSetupProps) {
 
               <Button
                 type="submit"
-                isLoading={isLoading === 'create'}
+                isLoading={createMutation.isPending}
                 disabled={!createData.name}
                 variant={!createData.name ? 'neutral' : 'primary'}
                 className="w-full py-4 text-lg mt-auto"
@@ -155,7 +155,7 @@ export default function HouseholdSetup({ onSuccess }: HouseholdSetupProps) {
 
               <Button
                 type="submit"
-                isLoading={isLoading === 'join'}
+                isLoading={joinMutation.isPending}
                 disabled={!joinCode}
                 variant={!joinCode ? 'neutral' : 'secondary'}
                 className="w-full py-4 text-lg mt-auto"

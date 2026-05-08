@@ -1,32 +1,56 @@
 import React, { useEffect, useState } from 'react';
-import { User, ShieldCheck, CreditCard, ArrowLeft, Camera, CheckCircle2 } from 'lucide-react';
+import { User, ShieldCheck, CreditCard, ArrowLeft, Camera, CheckCircle2, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { userService } from '../services/userService';
 import { getAssetUrl } from '../utils/assetUtils';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Badge } from './ui/Badge';
 import { GlassSection } from './ui/GlassSection';
+import { useProfile, useUpdateProfile, useUploadAvatar } from '../hooks/useProfile';
 
 interface ProfileProps {
   onBack: () => void;
   userName: string;
 }
 
-export default function Profile({ onBack, userName }: ProfileProps) {
+export default function Profile({ onBack }: ProfileProps) {
   const { t } = useTranslation();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  
+  // Queries & Mutations
+  const { data: profile, isLoading } = useProfile();
+  const updateProfileMutation = useUpdateProfile();
+  const uploadAvatarMutation = useUploadAvatar();
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    displayName: userName || '',
+    displayName: '',
     gender: '',
     dob: '',
     revolutUser: '',
     discordId: '',
     profilePicUrl: ''
   });
+
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // --- 1. SYNC PROFILE DATA ---
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        firstName: profile.first_name || '',
+        lastName: profile.last_name || '',
+        displayName: profile.display_name || '',
+        gender: profile.gender || '',
+        dob: profile.date_of_birth || '',
+        revolutUser: profile.revolut_username || '',
+        discordId: profile.discord_id || '',
+        profilePicUrl: profile.profile_pic_url || ''
+      });
+    }
+  }, [profile]);
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -36,8 +60,7 @@ export default function Profile({ onBack, userName }: ProfileProps) {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       try {
-        const { avatar_url } = await userService.uploadAvatar(file);
-        setFormData(prev => ({...prev, profilePicUrl: avatar_url}));
+        await uploadAvatarMutation.mutateAsync(file);
       } catch (err) {
         alert(t('profile.errors.uploadFailed'));
       }
@@ -46,38 +69,8 @@ export default function Profile({ onBack, userName }: ProfileProps) {
 
   const fullAvatarUrl = getAssetUrl(formData.profilePicUrl);
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-
-  // --- 1. FETCH PROFILE ON LOAD ---
-  useEffect(() => {
-    const loadProfileData = async () => {
-      try {
-        const data = await userService.getProfile();
-        setFormData({
-          firstName: data.first_name || '',
-          lastName: data.last_name || '',
-          displayName: data.display_name || '',
-          gender: data.gender || '',
-          dob: data.date_of_birth || '',
-          revolutUser: data.revolut_username || '',
-          discordId: data.discord_id || '',
-          profilePicUrl: data.profile_pic_url || ''
-        });
-      } catch (err) {
-        console.error("Failed to load profile:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadProfileData();
-  }, []);
-
   // --- 2. SAVE CHANGES ---
   const handleSave = async () => {
-    setIsSaving(true);
     setSaveSuccess(false);
 
     // Map frontend state back to backend column names
@@ -92,14 +85,12 @@ export default function Profile({ onBack, userName }: ProfileProps) {
     };
 
     try {
-      await userService.updateProfile(payload);
+      await updateProfileMutation.mutateAsync(payload);
       setSaveSuccess(true);
       // Hide success message after 3 seconds
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
       alert(t('profile.errors.saveFailed'));
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -158,8 +149,12 @@ export default function Profile({ onBack, userName }: ProfileProps) {
               <User size={64} className="text-neutral-600" />
             )}
           </div>
-          <button className="absolute bottom-0 right-0 p-2.5 bg-emerald-500 text-neutral-950 rounded-full hover:scale-110 transition-transform shadow-lg" onClick={handleAvatarClick}>
-            <Camera size={18} />
+          <button 
+            className="absolute bottom-0 right-0 p-2.5 bg-emerald-500 text-neutral-950 rounded-full hover:scale-110 transition-transform shadow-lg disabled:opacity-50" 
+            onClick={handleAvatarClick}
+            disabled={uploadAvatarMutation.isPending}
+          >
+            {uploadAvatarMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
           </button>
         </div>
         <div className="flex-1 text-center md:text-left">
@@ -237,7 +232,7 @@ export default function Profile({ onBack, userName }: ProfileProps) {
       <div className="flex justify-end mb-12">
         <Button 
           onClick={handleSave}
-          isLoading={isSaving}
+          isLoading={updateProfileMutation.isPending}
           className="px-10"
         >
           {t('common.saveChanges')}

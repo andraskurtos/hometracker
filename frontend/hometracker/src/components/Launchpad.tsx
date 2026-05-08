@@ -27,7 +27,7 @@ export default function Launchpad() {
             <Card
               key={mod.name}
               hoverable
-              padding="p-10"
+              padding="py-16 px-10"
               onClick={() => navigate(mod.path)}
               className={`group flex flex-col items-center justify-center cursor-pointer transition-all duration-300 ease-out hover:-translate-y-2 ${mod.bgHover}`}
             >
