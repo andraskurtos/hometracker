@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { Home, UserPlus, ArrowRight, Sparkles, LayoutGrid } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { householdService } from '../services/householdService';
-import Card from './ui/Card';
-import Button from './ui/Button';
-import Input from './ui/Input';
+import { Card } from './ui/Card';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
 
 interface HouseholdSetupProps {
   onSuccess: () => void;

@@ -7,7 +7,7 @@ interface BadgeProps {
   className?: string;
 }
 
-const Badge = ({ 
+export const Badge = ({ 
   children, 
   variant = 'emerald', 
   icon, 
@@ -32,5 +32,3 @@ const Badge = ({
     </span>
   );
 };
-
-export default Badge;

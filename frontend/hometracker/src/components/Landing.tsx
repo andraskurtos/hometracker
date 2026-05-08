@@ -1,8 +1,8 @@
 import { Receipt, Shield, Zap, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import Card from './ui/Card';
-import Button from './ui/Button';
-import Badge from './ui/Badge';
+import { Card } from './ui/Card';
+import { Button } from './ui/Button';
+import { Badge } from './ui/Badge';
 
 interface LandingProps {
   onLoginClick: () => void;

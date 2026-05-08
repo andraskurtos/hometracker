@@ -3,9 +3,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { householdService, type Household, type HouseholdMember } from '../services/householdService';
 import { getAssetUrl } from '../utils/assetUtils';
-import Card from './ui/Card';
-import Button from './ui/Button';
-import Badge from './ui/Badge';
+import { Card } from './ui/Card';
+import { Button } from './ui/Button';
+import { Badge } from './ui/Badge';
 
 interface HouseholdManagementProps {
   household: Household;

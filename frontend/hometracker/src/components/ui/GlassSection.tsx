@@ -8,7 +8,7 @@ interface GlassSectionProps {
   columns?: 1 | 2;
 }
 
-const GlassSection = ({ 
+export const GlassSection = ({ 
   title, 
   icon, 
   children, 
@@ -27,5 +27,3 @@ const GlassSection = ({
     </div>
   );
 };
-
-export default GlassSection;

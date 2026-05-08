@@ -3,9 +3,9 @@ import { Mail, Lock, ArrowRight, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { userService } from '../services/userService';
-import Card from './ui/Card';
-import Button from './ui/Button';
-import Input from './ui/Input';
+import { Card } from './ui/Card';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
 
 interface LoginProps {
   onLoginSuccess: (token: string, userName: string) => void;

@@ -7,7 +7,7 @@ interface CardProps {
   padding?: 'none' | 'small' | 'medium' | 'large';
 }
 
-const Card = ({ 
+export const Card = ({ 
   children, 
   className = '', 
   hoverable = false, 
@@ -31,5 +31,3 @@ const Card = ({
     </div>
   );
 };
-
-export default Card;
