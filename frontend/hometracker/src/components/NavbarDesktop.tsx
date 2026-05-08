@@ -57,13 +57,13 @@ export const NavbarDesktop = ({ logic, ...props }: DesktopProps) => {
                 <div className="absolute top-full left-0 right-0 mt-2 p-2 bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200 z-50">
                   <div className="max-h-60 overflow-y-auto scrollbar-hide">
                     {props.households.map((h) => (
-                      <button
+                      <div
                         key={h.id}
                         onClick={() => {
                           props.onSelectHousehold?.(h.id);
                           setIsHouseholdOpen(false);
                         }}
-                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl mb-1 transition-all ${
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl mb-1 transition-all cursor-pointer ${
                           h.id === props.activeHousehold?.id 
                             ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
                             : 'text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100'
@@ -89,7 +89,7 @@ export const NavbarDesktop = ({ logic, ...props }: DesktopProps) => {
                           )}
                           {h.id === props.activeHousehold?.id && <Check size={14} strokeWidth={3} className="text-emerald-400" />}
                         </div>
-                      </button>
+                      </div>
                     ))}
                   </div>
                   

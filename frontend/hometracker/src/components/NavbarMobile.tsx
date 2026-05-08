@@ -37,10 +37,10 @@ export const NavbarMobile = ({ logic, ...props }: MobileProps) => {
               </label>
               <div className="space-y-2">
                 {props.households.map(h => (
-                  <button
+                  <div
                     key={h.id}
                     onClick={() => { props.onSelectHousehold?.(h.id); setIsMenuOpen(false); }}
-                    className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                    className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
                       h.id === props.activeHousehold?.id 
                       ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
                       : 'bg-neutral-900/50 border-neutral-800 text-neutral-400'
@@ -62,7 +62,7 @@ export const NavbarMobile = ({ logic, ...props }: MobileProps) => {
                       )}
                       {h.id === props.activeHousehold?.id && <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]" />}
                     </div>
-                  </button>
+                  </div>
                 ))}
                 
                 <button
