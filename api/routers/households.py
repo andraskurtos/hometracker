@@ -136,7 +136,7 @@ def get_my_households(user_id: str = Depends(get_current_user_id)):
                         SELECT h.id, h.name, h.description, h.join_code, h.base_currency, hm.role, hm.joined_at
                         FROM households h
                         JOIN household_members hm ON h.id = hm.household_id
-                        WHERE hm.user_id = %s AND h.is_active = true AND hm.is_active TRUE
+                        WHERE hm.user_id = %s AND h.is_active = true AND hm.is_active = TRUE
                         ORDER BY hm.joined_at DESC;
                     """, (user_id,))
         

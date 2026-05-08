@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, type JSX } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Navbar from "./components/Navbar"
 import ReceiptSplitter from "./components/ReceiptSplitter"
 import Launchpad from "./components/Launchpad"
@@ -21,6 +22,7 @@ const ProtectedRoute = ({ children, isAuthenticated }: { children: JSX.Element, 
 };
 
 function App() {
+  const { t } = useTranslation();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!localStorage.getItem('token'));
   const [userName, setUserName] = useState<string>(localStorage.getItem('userName') || '');
   const [households, setHouseholds] = useState<Household[]>([]);
@@ -136,7 +138,7 @@ function App() {
                   className="flex items-center gap-2 text-neutral-500 hover:text-neutral-200 transition-colors group"
                 >
                   <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-                  <span>Back to Launchpad</span>
+                  <span>{t('common.backToLaunchpad')}</span>
                 </button>
                 <ReceiptSplitter />
               </div>

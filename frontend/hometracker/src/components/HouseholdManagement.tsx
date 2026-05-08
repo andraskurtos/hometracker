@@ -1,5 +1,6 @@
 import { Home, Copy, Check, ArrowLeft, Users, Shield } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Household } from '../services/householdService';
 
 interface HouseholdManagementProps {
@@ -8,6 +9,7 @@ interface HouseholdManagementProps {
 }
 
 export default function HouseholdManagement({ household, onBack }: HouseholdManagementProps) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   const copyToClipboard = () => {
@@ -24,7 +26,7 @@ export default function HouseholdManagement({ household, onBack }: HouseholdMana
         className="flex items-center gap-2 text-neutral-500 hover:text-neutral-200 transition-colors group w-fit"
       >
         <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-        <span>Back to Launchpad</span>
+        <span>{t('common.backToLaunchpad')}</span>
       </button>
 
       {/* Hero Section */}
@@ -40,7 +42,7 @@ export default function HouseholdManagement({ household, onBack }: HouseholdMana
             </div>
             <div>
               <h1 className="text-3xl font-black text-neutral-100">{household.name}</h1>
-              <p className="text-neutral-500">{household.description || "No description provided"}</p>
+              <p className="text-neutral-500">{household.description || t('household.management.noDescription')}</p>
             </div>
           </div>
           
@@ -57,7 +59,7 @@ export default function HouseholdManagement({ household, onBack }: HouseholdMana
 
       {/* Join Code Card */}
       <div className="p-8 bg-neutral-900/40 border border-neutral-800/60 rounded-3xl backdrop-blur-md">
-        <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-widest mb-4 ml-1">Household Join Code</h3>
+        <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-widest mb-4 ml-1">{t('household.management.joinCodeTitle')}</h3>
         <div className="flex items-center gap-4 bg-neutral-950/50 p-6 rounded-2xl border border-neutral-800">
           <code className="text-4xl font-mono font-bold tracking-widest text-emerald-400 flex-1">
             {household.join_code}
@@ -70,7 +72,7 @@ export default function HouseholdManagement({ household, onBack }: HouseholdMana
           </button>
         </div>
         <p className="text-sm text-neutral-500 mt-4 ml-1">
-          Share this code with your roommates or family members so they can join this household.
+          {t('household.management.joinCodeHelp')}
         </p>
       </div>
 
@@ -81,8 +83,8 @@ export default function HouseholdManagement({ household, onBack }: HouseholdMana
             <Users size={20} />
           </div>
           <div>
-            <p className="text-xs text-neutral-500 uppercase font-semibold">Status</p>
-            <p className="text-neutral-200">Active</p>
+            <p className="text-xs text-neutral-500 uppercase font-semibold">{t('common.status')}</p>
+            <p className="text-neutral-200">{t('common.active')}</p>
           </div>
         </div>
         <div className="p-6 bg-neutral-900/40 border border-neutral-800/60 rounded-3xl backdrop-blur-md flex items-center gap-4">
@@ -90,7 +92,7 @@ export default function HouseholdManagement({ household, onBack }: HouseholdMana
             <Shield size={20} />
           </div>
           <div>
-            <p className="text-xs text-neutral-500 uppercase font-semibold">Joined At</p>
+            <p className="text-xs text-neutral-500 uppercase font-semibold">{t('household.management.joinedAt')}</p>
             <p className="text-neutral-200">{new Date(household.joined_at).toLocaleDateString()}</p>
           </div>
         </div>

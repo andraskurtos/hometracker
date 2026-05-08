@@ -1,0 +1,151 @@
+{
+  "common": {
+    "appName": "HomeTracker",
+    "backToLaunchpad": "Back to Launchpad",
+    "backToDashboard": "Back to Dashboard",
+    "profileSettings": "Profile Settings",
+    "logOut": "Log Out",
+    "saveChanges": "Save Changes",
+    "status": "Status",
+    "active": "Active",
+    "loading": "Loading..."
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "welcomeBack": "Welcome Back",
+    "createAccount": "Create Account",
+    "loginDescription": "Enter your credentials to access your dashboard.",
+    "registerDescription": "Fill in the details below to get started.",
+    "passwordsDoNotMatch": "Passwords do not match",
+    "accountCreated": "Account created successfully! You can now log in.",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "email": "Email address",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "noAccount": "Don't have an account? Sign Up",
+    "hasAccount": "Already have an account? Sign In",
+    "backToLanding": "← Back to landing"
+  },
+  "landing": {
+    "badge": "AI-Powered Home Management",
+    "description": "Effortlessly track household expenses, split receipts, and manage your budget with the power of Gemini AI.",
+    "accessDashboard": "Access Dashboard",
+    "features": {
+      "ocr": {
+        "title": "AI OCR Parsing",
+        "description": "Snap a photo and let Gemini extract every item and price automatically."
+      },
+      "splitting": {
+        "title": "Smart Splitting",
+        "description": "Easily assign items to different household members in seconds."
+      },
+      "privacy": {
+        "title": "Privacy First",
+        "description": "Your data is stored securely and processed with advanced encryption."
+      }
+    }
+  },
+  "launchpad": {
+    "groceries": {
+      "name": "Groceries",
+      "description": "Track shopping"
+    },
+    "household": {
+      "name": "Household",
+      "description": "Manage members"
+    }
+  },
+  "profile": {
+    "fetchingDetails": "Fetching your details...",
+    "changesSaved": "Changes saved!",
+    "profileAlt": "Profile",
+    "setDisplayName": "Set Display Name",
+    "memberSince": "Member since {{year}}",
+    "sections": {
+      "name": "Name",
+      "personalData": "Personal Data",
+      "integrations": "Integrations"
+    },
+    "fields": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "displayName": "Display Name",
+      "gender": "Gender",
+      "dob": "Date of Birth",
+      "revolut": "Revolut Username",
+      "discord": "Discord User ID"
+    },
+    "placeholders": {
+      "firstName": "András",
+      "lastName": "Kürtös",
+      "displayName": "andrish",
+      "revolut": "@username",
+      "discord": "e.g. 123456789"
+    },
+    "genderOptions": {
+      "select": "Select Gender",
+      "male": "Male",
+      "female": "Female",
+      "other": "Other"
+    },
+    "errors": {
+      "saveFailed": "Error saving profile changes.",
+      "uploadFailed": "Failed to upload image"
+    }
+  },
+  "household": {
+    "setup": {
+      "title": "Establish Your Household",
+      "description": "HomeTracker works best when you're part of a household. Create a new one for your family or join an existing one.",
+      "create": {
+        "title": "Create New",
+        "nameLabel": "Household Name",
+        "namePlaceholder": "e.g. Our Cozy Apartment",
+        "descLabel": "Description (Optional)",
+        "descPlaceholder": "Brief description",
+        "currencyLabel": "Base Currency",
+        "submit": "Initialize Household"
+      },
+      "join": {
+        "title": "Join Existing",
+        "description": "Have a code from a roommate or family member? Enter it here to sync your pantry and expenses instantly.",
+        "codeLabel": "Join Code",
+        "submit": "Connect to Household"
+      }
+    },
+    "management": {
+      "noDescription": "No description provided",
+      "joinCodeTitle": "Household Join Code",
+      "joinCodeHelp": "Share this code with your roommates or family members so they can join this household.",
+      "joinedAt": "Joined At"
+    },
+    "currencies": {
+      "HUF": "Hungarian Forint (HUF)",
+      "EUR": "Euro (EUR)",
+      "USD": "US Dollar (USD)"
+    }
+  },
+  "groceries": {
+    "loading": "Loading receipts...",
+    "noReceipts": "No receipts found. Tap the + to scan one!",
+    "noItems": "No items found.",
+    "headers": {
+      "name": "Name",
+      "qty": "Qty",
+      "size": "Size",
+      "who": "Who",
+      "price": "Price"
+    },
+    "modal": {
+      "title": "Scan Receipt",
+      "uploadText": "Tap to select an image",
+      "submit": "Upload & Parse",
+      "analyzing": "Analyzing with AI..."
+    },
+    "errors": {
+      "uploadFailed": "Failed to upload receipt. Check console for details."
+    }
+  }
+}

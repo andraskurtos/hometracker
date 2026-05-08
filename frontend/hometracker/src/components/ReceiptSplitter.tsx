@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef, type JSX } from 'react';
 import { ChevronDown, Plus, Loader2, Upload, X, FileImage } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { fetchReceipts, uploadReceipt, type UIReceipt } from '../services/receiptService';
 
 const AVAILABLE_USERS: number[] = [1, 2, 3];
 
 export default function ReceiptSplitter(): JSX.Element {
+  const { t } = useTranslation();
   // --- EXISTING STATE ---
   const [receipts, setReceipts] = useState<UIReceipt[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -81,7 +83,7 @@ export default function ReceiptSplitter(): JSX.Element {
       setSelectedFile(null);
       await loadData(); 
     } catch (error) {
-      alert("Failed to upload receipt. Check console for details.");
+      alert(t('groceries.errors.uploadFailed'));
     } finally {
       setIsUploading(false);
     }
@@ -91,7 +93,7 @@ export default function ReceiptSplitter(): JSX.Element {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center text-emerald-500">
         <Loader2 className="w-12 h-12 animate-spin mb-4" />
-        <p className="text-neutral-400 font-medium">Loading receipts...</p>
+        <p className="text-neutral-400 font-medium">{t('groceries.loading')}</p>
       </div>
     );
   }
@@ -101,7 +103,7 @@ export default function ReceiptSplitter(): JSX.Element {
       <div className="w-full flex-1 bg-neutral-900/40 border border-neutral-800/60 backdrop-blur-sm md:rounded-2xl shadow-2xl overflow-y-auto no-scrollbar">
         
         {receipts.length === 0 ? (
-          <div className="p-8 text-center text-neutral-500">No receipts found. Tap the + to scan one!</div>
+          <div className="p-8 text-center text-neutral-500">{t('groceries.noReceipts')}</div>
         ) : (
           receipts.map((receipt) => {
             const isExpanded = expandedIds.has(receipt.id);
@@ -124,15 +126,15 @@ export default function ReceiptSplitter(): JSX.Element {
                 <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                   <div className="px-6 pb-6 md:px-8 md:pb-8">
                     {receipt.items.length === 0 ? (
-                      <p className="text-neutral-500 italic text-lg py-4">No items found.</p>
+                      <p className="text-neutral-500 italic text-lg py-4">{t('groceries.noItems')}</p>
                     ) : (
                       <>
                         <div className="grid grid-cols-12 gap-4 text-sm font-bold text-neutral-500 uppercase tracking-wider mb-4 border-b border-neutral-800/60 pb-4">
-                          <div className="col-span-4 lg:col-span-5">Name</div>
-                          <div className="col-span-1 text-center">Qty</div>
-                          <div className="col-span-1 lg:col-span-2 text-center hidden sm:block">Size</div>
-                          <div className="col-span-4 lg:col-span-2 text-center">Who</div>
-                          <div className="col-span-3 lg:col-span-2 text-right">Price</div>
+                          <div className="col-span-4 lg:col-span-5">{t('groceries.headers.name')}</div>
+                          <div className="col-span-1 text-center">{t('groceries.headers.qty')}</div>
+                          <div className="col-span-1 lg:col-span-2 text-center hidden sm:block">{t('groceries.headers.size')}</div>
+                          <div className="col-span-4 lg:col-span-2 text-center">{t('groceries.headers.who')}</div>
+                          <div className="col-span-3 lg:col-span-2 text-right">{t('groceries.headers.price')}</div>
                         </div>
 
                         {receipt.items.map((item) => (
@@ -202,7 +204,7 @@ export default function ReceiptSplitter(): JSX.Element {
               <X size={24} />
             </button>
 
-            <h3 className="text-2xl font-bold text-neutral-200 mb-6">Scan Receipt</h3>
+            <h3 className="text-2xl font-bold text-neutral-200 mb-6">{t('groceries.modal.title')}</h3>
 
             {/* Hidden file input */}
             <input 
@@ -230,7 +232,7 @@ export default function ReceiptSplitter(): JSX.Element {
               ) : (
                 <>
                   <Upload className="w-10 h-10 text-neutral-500 mb-2" />
-                  <span className="text-neutral-400 font-medium">Tap to select an image</span>
+                  <span className="text-neutral-400 font-medium">{t('groceries.modal.uploadText')}</span>
                 </>
               )}
             </div>
@@ -248,10 +250,10 @@ export default function ReceiptSplitter(): JSX.Element {
               {isUploading ? (
                 <>
                   <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                  Analyzing with AI...
+                  {t('groceries.modal.analyzing')}
                 </>
               ) : (
-                'Upload & Parse'
+                t('groceries.modal.submit')
               )}
             </button>
 

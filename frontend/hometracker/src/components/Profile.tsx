@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { User, ShieldCheck, CreditCard, ArrowLeft, Camera, Loader2, CheckCircle2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { userService } from '../services/userService';
 
 interface ProfileProps {
@@ -41,6 +42,7 @@ const Section = ({ title, icon: Icon, children }: { title: string, icon: any, ch
 );
 
 export default function Profile({ onBack, userName }: ProfileProps) {
+  const { t } = useTranslation();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -64,7 +66,7 @@ export default function Profile({ onBack, userName }: ProfileProps) {
         const { avatar_url } = await userService.uploadAvatar(file);
         setFormData(prev => ({...prev, profilePicUrl: avatar_url}));
       } catch (err) {
-        alert("Failed to upload image");
+        alert(t('profile.errors.uploadFailed'));
       }
     }
   };
@@ -124,7 +126,7 @@ export default function Profile({ onBack, userName }: ProfileProps) {
       // Hide success message after 3 seconds
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
-      alert("Error saving profile changes.");
+      alert(t('profile.errors.saveFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -139,7 +141,7 @@ export default function Profile({ onBack, userName }: ProfileProps) {
     return (
       <div className="w-full h-64 flex flex-col items-center justify-center text-emerald-500">
         <Loader2 className="w-10 h-10 animate-spin mb-4" />
-        <p className="text-neutral-500 animate-pulse">Fetching your details...</p>
+        <p className="text-neutral-500 animate-pulse">{t('profile.fetchingDetails')}</p>
       </div>
     );
   }
@@ -160,13 +162,13 @@ export default function Profile({ onBack, userName }: ProfileProps) {
           className="flex items-center gap-2 text-neutral-500 hover:text-neutral-200 transition-colors group"
         >
           <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-          <span>Back to Dashboard</span>
+          <span>{t('common.backToDashboard')}</span>
         </button>
         
         {saveSuccess && (
           <div className="flex items-center gap-2 text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-4 py-1.5 rounded-full animate-in zoom-in duration-300">
             <CheckCircle2 size={16} />
-            <span className="text-sm font-medium">Changes saved!</span>
+            <span className="text-sm font-medium">{t('profile.changesSaved')}</span>
           </div>
         )}
       </div>
@@ -178,7 +180,7 @@ export default function Profile({ onBack, userName }: ProfileProps) {
             {fullAvatarUrl? (
               <img
                 src={fullAvatarUrl}
-                alt="Profile"
+                alt={t('profile.profileAlt')}
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -190,38 +192,38 @@ export default function Profile({ onBack, userName }: ProfileProps) {
           </button>
         </div>
         <div className="flex-1 text-center md:text-left">
-          <h2 className="text-3xl font-bold text-neutral-100 mb-1">{formData.displayName || 'Set Display Name'}</h2>
-          <p className="text-neutral-500">Member since {new Date().getFullYear()}</p>
+          <h2 className="text-3xl font-bold text-neutral-100 mb-1">{formData.displayName || t('profile.setDisplayName')}</h2>
+          <p className="text-neutral-500">{t('profile.memberSince', { year: new Date().getFullYear() })}</p>
         </div>
       </div>
 
       {/* Form Sections */}
-      <Section title="Name" icon={User}>
-        <InputField label="First Name" name="firstName" value={formData.firstName} onChange={handleInputChange} isFieldEmpty={isFieldEmpty} placeholder="András" />
-        <InputField label="Last Name" name="lastName" value={formData.lastName} onChange={handleInputChange} isFieldEmpty={isFieldEmpty} placeholder="Kürtös" />
-        <InputField label="Display Name" name="displayName" value={formData.displayName} onChange={handleInputChange} isFieldEmpty={isFieldEmpty} placeholder="andrish" />
+      <Section title={t('profile.sections.name')} icon={User}>
+        <InputField label={t('profile.fields.firstName')} name="firstName" value={formData.firstName} onChange={handleInputChange} isFieldEmpty={isFieldEmpty} placeholder={t('profile.placeholders.firstName')} />
+        <InputField label={t('profile.fields.lastName')} name="lastName" value={formData.lastName} onChange={handleInputChange} isFieldEmpty={isFieldEmpty} placeholder={t('profile.placeholders.lastName')} />
+        <InputField label={t('profile.fields.displayName')} name="displayName" value={formData.displayName} onChange={handleInputChange} isFieldEmpty={isFieldEmpty} placeholder={t('profile.placeholders.displayName')} />
       </Section>
 
-      <Section title="Personal Data" icon={ShieldCheck}>
+      <Section title={t('profile.sections.personalData')} icon={ShieldCheck}>
         <div className="flex flex-col gap-1.5 w-full">
-          <label className="text-xs font-medium text-neutral-500 uppercase tracking-wider ml-1">Gender</label>
+          <label className="text-xs font-medium text-neutral-500 uppercase tracking-wider ml-1">{t('profile.fields.gender')}</label>
           <select 
             value={formData.gender}
             onChange={(e) => handleInputChange('gender', e.target.value)}
             className={`w-full px-4 py-2.5 rounded-xl bg-neutral-900/60 border ${isFieldEmpty(formData.gender) ? 'border-red-500/50 focus:border-red-500' : 'border-neutral-800/60 focus:border-emerald-500/50'} text-neutral-200 outline-none transition-all duration-200 appearance-none`}
           >
-            <option value="" disabled>Select Gender</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="other">Other</option>
+            <option value="" disabled>{t('profile.genderOptions.select')}</option>
+            <option value="male">{t('profile.genderOptions.male')}</option>
+            <option value="female">{t('profile.genderOptions.female')}</option>
+            <option value="other">{t('profile.genderOptions.other')}</option>
           </select>
         </div>
-        <InputField label="Date of Birth" name="dob" value={formData.dob} onChange={handleInputChange} isFieldEmpty={isFieldEmpty} type="date" />
+        <InputField label={t('profile.fields.dob')} name="dob" value={formData.dob} onChange={handleInputChange} isFieldEmpty={isFieldEmpty} type="date" />
       </Section>
 
-      <Section title="Integrations" icon={CreditCard}>
-        <InputField label="Revolut Username" name="revolutUser" value={formData.revolutUser} onChange={handleInputChange} isFieldEmpty={isFieldEmpty} placeholder="@username" />
-        <InputField label="Discord User ID" name="discordId" value={formData.discordId} onChange={handleInputChange} isFieldEmpty={isFieldEmpty} placeholder="e.g. 123456789" />
+      <Section title={t('profile.sections.integrations')} icon={CreditCard}>
+        <InputField label={t('profile.fields.revolut')} name="revolutUser" value={formData.revolutUser} onChange={handleInputChange} isFieldEmpty={isFieldEmpty} placeholder={t('profile.placeholders.revolut')} />
+        <InputField label={t('profile.fields.discord')} name="discordId" value={formData.discordId} onChange={handleInputChange} isFieldEmpty={isFieldEmpty} placeholder={t('profile.placeholders.discord')} />
       </Section>
 
       {/* Save Button */}
@@ -234,7 +236,7 @@ export default function Profile({ onBack, userName }: ProfileProps) {
           {isSaving ? (
             <Loader2 className="w-5 h-5 animate-spin" />
           ) : (
-            "Save Changes"
+            t('common.saveChanges')
           )}
         </button>
       </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Lock, Loader2, ArrowRight, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { userService } from '../services/userService';
 
 interface LoginProps {
@@ -9,6 +10,7 @@ interface LoginProps {
 }
 
 export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
   const [email, setEmail] = useState('');
@@ -34,7 +36,7 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
     setSuccess('');
 
     if (mode === 'register' && password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t('auth.passwordsDoNotMatch'));
       setIsLoading(false);
       return;
     }
@@ -45,7 +47,7 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
         onLoginSuccess(data.access_token, data.user.first_name);
       } else {
         await userService.register(email, password, firstName, lastName);
-        setSuccess("Account created successfully! You can now log in.");
+        setSuccess(t('auth.accountCreated'));
         navigate('/login');
         setPassword('');
         setConfirmPassword('');
@@ -70,12 +72,12 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
       
       <div className="relative z-10">
         <h2 className="text-3xl font-extrabold text-neutral-200 mb-2">
-          {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+          {mode === 'login' ? t('auth.welcomeBack') : t('auth.createAccount')}
         </h2>
         <p className="text-neutral-500 mb-8">
           {mode === 'login' 
-            ? 'Enter your credentials to access your dashboard.' 
-            : 'Fill in the details below to get started.'}
+            ? t('auth.loginDescription') 
+            : t('auth.registerDescription')}
         </p>
 
         {error && (
@@ -103,7 +105,7 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 bg-neutral-800/50 border border-neutral-700 rounded-xl text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-sm"
-                  placeholder="First Name"
+                  placeholder={t('auth.firstName')}
                 />
               </div>
               <div className="relative">
@@ -116,7 +118,7 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 bg-neutral-800/50 border border-neutral-700 rounded-xl text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-sm"
-                  placeholder="Last Name"
+                  placeholder={t('auth.lastName')}
                 />
               </div>
             </div>
@@ -132,7 +134,7 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full pl-11 pr-4 py-3 bg-neutral-800/50 border border-neutral-700 rounded-xl text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
-              placeholder="Email address"
+              placeholder={t('auth.email')}
             />
           </div>
 
@@ -146,7 +148,7 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full pl-11 pr-4 py-3 bg-neutral-800/50 border border-neutral-700 rounded-xl text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
-              placeholder="Password"
+              placeholder={t('auth.password')}
             />
           </div>
 
@@ -161,7 +163,7 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full pl-11 pr-4 py-3 bg-neutral-800/50 border border-neutral-700 rounded-xl text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
-                placeholder="Confirm Password"
+                placeholder={t('auth.confirmPassword')}
               />
             </div>
           )}
@@ -179,7 +181,7 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
               <>
-                {mode === 'login' ? 'Sign In' : 'Sign Up'} <ArrowRight className="ml-2 w-5 h-5" />
+                {mode === 'login' ? t('auth.signIn') : t('auth.signUp')} <ArrowRight className="ml-2 w-5 h-5" />
               </>
             )}
           </button>
@@ -191,8 +193,8 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
             className="text-neutral-500 hover:text-emerald-400 transition-colors text-sm font-medium"
           >
             {mode === 'login' 
-              ? "Don't have an account? Sign Up" 
-              : "Already have an account? Sign In"}
+              ? t('auth.noAccount') 
+              : t('auth.hasAccount')}
           </button>
         </div>
 
@@ -201,7 +203,7 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
             onClick={() => navigate('/landing')}
             className="text-neutral-600 hover:text-neutral-400 transition-colors text-xs"
           >
-            ← Back to landing
+            {t('auth.backToLanding')}
           </button>
         </div>
       </div>

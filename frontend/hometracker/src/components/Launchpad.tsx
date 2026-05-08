@@ -1,21 +1,23 @@
 import { ShoppingBasket, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 export default function Launchpad() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const modules = [
     { 
-      name: 'Groceries', 
-      description: 'Track shopping', 
+      name: t('launchpad.groceries.name'), 
+      description: t('launchpad.groceries.description'), 
       icon: ShoppingBasket, 
       color: 'text-emerald-400', 
       bgHover: 'hover:border-emerald-500/50 hover:shadow-[0_0_15px_rgba(16,185,129,0.15)]',
       path: '/groceries'
     },
     { 
-      name: 'Household', 
-      description: 'Manage members', 
+      name: t('launchpad.household.name'), 
+      description: t('launchpad.household.description'), 
       icon: Home, 
       color: 'text-blue-400', 
       bgHover: 'hover:border-blue-500/50 hover:shadow-[0_0_15px_rgba(37,99,235,0.15)]',

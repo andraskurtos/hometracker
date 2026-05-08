@@ -1,0 +1,151 @@
+{
+  "common": {
+    "appName": "HomeTracker",
+    "backToLaunchpad": "Vissza az irányítópulthoz",
+    "backToDashboard": "Vissza a kezdőlapra",
+    "profileSettings": "Profil beállítások",
+    "logOut": "Kijelentkezés",
+    "saveChanges": "Változtatások mentése",
+    "status": "Állapot",
+    "active": "Aktív",
+    "loading": "Betöltés..."
+  },
+  "auth": {
+    "signIn": "Bejelentkezés",
+    "signUp": "Regisztráció",
+    "welcomeBack": "Üdvözöljük újra",
+    "createAccount": "Fiók létrehozása",
+    "loginDescription": "Adja meg adatait az irányítópult eléréséhez.",
+    "registerDescription": "Töltse ki az alábbi adatokat a kezdéshez.",
+    "passwordsDoNotMatch": "A jelszavak nem egyeznek",
+    "accountCreated": "Fiók sikeresen létrehozva! Most már bejelentkezhet.",
+    "firstName": "Keresztnév",
+    "lastName": "Vezetéknév",
+    "email": "E-mail cím",
+    "password": "Jelszó",
+    "confirmPassword": "Jelszó megerősítése",
+    "noAccount": "Nincs még fiókja? Regisztráljon",
+    "hasAccount": "Már van fiókja? Jelentkezzen be",
+    "backToLanding": "← Vissza a kezdőoldalra"
+  },
+  "landing": {
+    "badge": "AI-alapú Otthoni Kezelés",
+    "description": "Kövesse nyomon háztartási kiadásait, ossza szét a blokkokat és kezelje költségvetését a Gemini AI segítségével.",
+    "accessDashboard": "Irányítópult megnyitása",
+    "features": {
+      "ocr": {
+        "title": "AI OCR elemzés",
+        "description": "Készítsen fotót, és hagyja, hogy a Gemini automatikusan kinyerjen minden tételt és árat."
+      },
+      "splitting": {
+        "title": "Okos szétosztás",
+        "description": "Rendelje hozzá a tételeket a háztartás tagjaihoz másodpercek alatt."
+      },
+      "privacy": {
+        "title": "Első a biztonság",
+        "description": "Adatait biztonságosan tároljuk és fejlett titkosítással dolgozzuk fel."
+      }
+    }
+  },
+  "launchpad": {
+    "groceries": {
+      "name": "Bevásárlás",
+      "description": "Vásárlások követése"
+    },
+    "household": {
+      "name": "Háztartás",
+      "description": "Tagok kezelése"
+    }
+  },
+  "profile": {
+    "fetchingDetails": "Adatok lekérése...",
+    "changesSaved": "Változtatások elmentve!",
+    "profileAlt": "Profil",
+    "setDisplayName": "Megjelenített név beállítása",
+    "memberSince": "Tag mióta: {{year}}",
+    "sections": {
+      "name": "Név",
+      "personalData": "Személyes adatok",
+      "integrations": "Integrációk"
+    },
+    "fields": {
+      "firstName": "Keresztnév",
+      "lastName": "Vezetéknév",
+      "displayName": "Megjelenített név",
+      "gender": "Nem",
+      "dob": "Születési dátum",
+      "revolut": "Revolut felhasználónév",
+      "discord": "Discord felhasználói azonosító"
+    },
+    "placeholders": {
+      "firstName": "András",
+      "lastName": "Kürtös",
+      "displayName": "andrish",
+      "revolut": "@felhasznalonev",
+      "discord": "pl. 123456789"
+    },
+    "genderOptions": {
+      "select": "Válassza ki a nemét",
+      "male": "Férfi",
+      "female": "Nő",
+      "other": "Egyéb"
+    },
+    "errors": {
+      "saveFailed": "Hiba történt a profil mentésekor.",
+      "uploadFailed": "A kép feltöltése sikertelen"
+    }
+  },
+  "household": {
+    "setup": {
+      "title": "Háztartás létrehozása",
+      "description": "A HomeTracker akkor működik a legjobban, ha egy háztartás tagja. Hozzon létre egy újat családjának, vagy csatlakozzon egy meglévőhöz.",
+      "create": {
+        "title": "Új létrehozása",
+        "nameLabel": "Háztartás neve",
+        "namePlaceholder": "pl. Otthonunk",
+        "descLabel": "Leírás (Opcionális)",
+        "descPlaceholder": "Rövid leírás",
+        "currencyLabel": "Alapértelmezett pénznem",
+        "submit": "Háztartás inicializálása"
+      },
+      "join": {
+        "title": "Csatlakozás meglévőhöz",
+        "description": "Van kódja egy lakótárstól vagy családtagtól? Adja meg itt a kamra és a kiadások azonnali szinkronizálásához.",
+        "codeLabel": "Csatlakozási kód",
+        "submit": "Csatlakozás a háztartáshoz"
+      }
+    },
+    "management": {
+      "noDescription": "Nincs megadva leírás",
+      "joinCodeTitle": "Háztartás csatlakozási kódja",
+      "joinCodeHelp": "Ossza meg ezt a kódot lakótársaival vagy családtagjaival, hogy csatlakozhassanak ehhez a háztartáshoz.",
+      "joinedAt": "Csatlakozás időpontja"
+    },
+    "currencies": {
+      "HUF": "Magyar Forint (HUF)",
+      "EUR": "Euró (EUR)",
+      "USD": "Amerikai Dollár (USD)"
+    }
+  },
+  "groceries": {
+    "loading": "Blokkok betöltése...",
+    "noReceipts": "Nem található blokk. Koppintson a + gombra egy szkenneléséhez!",
+    "noItems": "Nem található tétel.",
+    "headers": {
+      "name": "Név",
+      "qty": "Menny.",
+      "size": "Méret",
+      "who": "Ki",
+      "price": "Ár"
+    },
+    "modal": {
+      "title": "Blokk szkennelése",
+      "uploadText": "Koppintson a kép kiválasztásához",
+      "submit": "Feltöltés és elemzés",
+      "analyzing": "Elemzés AI segítségével..."
+    },
+    "errors": {
+      "uploadFailed": "A blokk feltöltése sikertelen. Ellenőrizze a konzolt a részletekért."
+    }
+  }
+}
