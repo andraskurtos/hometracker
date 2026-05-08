@@ -63,9 +63,9 @@ def create_household(household: HouseholdCreate, user_id : str = Depends(get_cur
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         cur.execute("""
-                        INSERT INTO households (name, description, join_code, base_currency, created_by)
-                        VALUES (%s, %s, %s, %s, %s)
-                        RETURNING id, name, join_code, base_currency;
+                        INSERT INTO households (name, description, join_code, base_currency, created_by, is_active)
+                        VALUES (%s, %s, %s, %s, %s, true)
+                        RETURNING id, name, join_code, base_currency, created_by;
                     """, (household.name, household.description, join_code, household.base_currency, user_id))
         
         new_household = cur.fetchone()
@@ -133,7 +133,7 @@ def get_my_households(user_id: str = Depends(get_current_user_id)):
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         cur.execute("""
-                        SELECT h.id, h.name, h.description, h.join_code, h.base_currency, hm.role, hm.joined_at
+                        SELECT h.id, h.name, h.description, h.join_code, h.base_currency, h.created_by, hm.role, hm.joined_at
                         FROM households h
                         JOIN household_members hm ON h.id = hm.household_id
                         WHERE hm.user_id = %s AND h.is_active = true AND hm.is_active = TRUE
@@ -196,7 +196,7 @@ def update_household(household_id: str, update_data: HouseholdUpdate, user_id: s
         
         cur.execute(f"""
                     UPDATE households SET {set_query}, updated_at = CURRENT_TIMESTAMP
-                    WHERE id = %s RETURNING id, name, description, base_currency;
+                    WHERE id = %s RETURNING id, name, description, base_currency, created_by;
                     """, tuple(values))
         
         updated_household = cur.fetchone()
@@ -300,7 +300,80 @@ def deactivate_member(household_id: str, target_user_id: str, user_id: str = Dep
     finally:
         if cur: cur.close()
         if conn: conn.close()
+
+@router.put("/{household_id}/deactivate")
+def deactivate_household(household_id: str, user_id: str = Depends(get_current_user_id)):
+    conn = None
+    cur = None
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        verify_admin_status(cur, household_id, user_id)
+        
+        cur.execute("""
+                    SELECT created_by
+                    FROM households
+                    WHERE id = %s
+                    """, (household_id,))
+        
+        if cur.fetchone()['created_by'] != user_id:
+            raise HTTPException(status_code=403, detail="Only the creator can delete a household")
+        
+        # Deactivate the household
+        cur.execute("""
+                    UPDATE households
+                    SET is_active = false, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s AND is_active = true
+                    RETURNING id;
+                    """, (household_id,))
+        
+        if not cur.fetchone():
+            raise HTTPException(status_code=404, detail="Household not found or already deactivated")
+            
+        # Also deactivate all memberships for this household
+        cur.execute("""
+                    UPDATE household_members
+                    SET is_active = false
+                    WHERE household_id = %s;
+                    """, (household_id,))
+        
+        conn.commit()
+        return {"message": "Household and all memberships successfully deactivated"}
+    except psycopg2.Error as e:
+        if conn: conn.rollback()
+        logger.error(f"Database error while deactivating household {household_id}: {e}")
+        raise HTTPException(status_code=500, detail="Database error while deactivating household")
+    finally:
+        if cur: cur.close()
+        if conn: conn.close()
         
         
-    
-    
+# --- DEBUG ENDPOINTS ---
+
+@router.delete("/debug/all-households")
+def debug_delete_all_households():
+    """
+    DEBUG ONLY: Deletes all households and their members from the database.
+    This is a hard delete and should only be used for testing.
+    """
+    conn = None
+    cur = None
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        
+        # Hard delete all household members first (due to foreign key constraints)
+        cur.execute("DELETE FROM household_members;")
+        # Hard delete all households
+        cur.execute("DELETE FROM households;")
+        
+        conn.commit()
+        return {"message": "DEBUG: All households and members deleted successfully."}
+    except psycopg2.Error as e:
+        if conn: conn.rollback()
+        logger.error(f"❌ DEBUG: Failed to delete all households: {e}")
+        raise HTTPException(status_code=500, detail="Database error while deleting all households")
+    finally:
+        if cur: cur.close()
+        if conn: conn.close()

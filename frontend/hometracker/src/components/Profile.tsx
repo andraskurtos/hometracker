@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { User, ShieldCheck, CreditCard, ArrowLeft, Camera, CheckCircle2, Loader2 } from 'lucide-react';
+import { User, ShieldCheck, CreditCard, Camera, CheckCircle2, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getAssetUrl } from '../utils/assetUtils';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
+import { ReturnButton } from './ui/ReturnButton';
 import { Input } from './ui/Input';
 import { Badge } from './ui/Badge';
 import { GlassSection } from './ui/GlassSection';
@@ -120,13 +121,10 @@ export default function Profile({ onBack }: ProfileProps) {
       />
       {/* Header */}
       <div className="flex items-center justify-between">
-        <button 
+        <ReturnButton 
           onClick={onBack}
-          className="flex items-center gap-2 text-neutral-500 hover:text-neutral-200 transition-colors group"
-        >
-          <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-          <span>{t('common.backToDashboard')}</span>
-        </button>
+          label={t('common.backToDashboard')}
+        />
         
         {saveSuccess && (
           <Badge variant="emerald" icon={<CheckCircle2 size={16} />} className="animate-in zoom-in duration-300">

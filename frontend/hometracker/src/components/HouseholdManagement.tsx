@@ -1,17 +1,19 @@
-import { Home, Copy, Check, ArrowLeft, Users, Shield, RefreshCw, Pencil, Trash2, UserPlus, Loader2 } from 'lucide-react';
+import { Home, Copy, Check, Users, Shield, RefreshCw, Pencil, Trash2, UserPlus, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type Household } from '../services/householdService';
 import { getAssetUrl } from '../utils/assetUtils';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
+import { ReturnButton } from './ui/ReturnButton';
 import { Badge } from './ui/Badge';
 import { 
   useHouseholdMembers, 
   useUpdateHousehold, 
   useRegenerateJoinCode, 
   useKickMember, 
-  usePromoteMember 
+  usePromoteMember,
+  useDeactivateHousehold
 } from '../hooks/useHouseholds';
 
 interface HouseholdManagementProps {
@@ -112,6 +114,7 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
   const regenerateCodeMutation = useRegenerateJoinCode();
   const kickMutation = useKickMember(household.id);
   const promoteMutation = usePromoteMember(household.id);
+  const deactivateHouseholdMutation = useDeactivateHousehold();
 
   // Editing state
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -197,16 +200,26 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
     }
   };
 
+  const handleDeleteHousehold = async () => {
+    if (!window.confirm(t('household.management.confirmDelete'))) return;
+    try {
+      await deactivateHouseholdMutation.mutateAsync(household.id);
+      onBack();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const currentUserId = localStorage.getItem('userId');
+  const isCreator = household.created_by == currentUserId;
+
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Back Button */}
-      <button 
+      <ReturnButton 
         onClick={onBack}
-        className="flex items-center gap-2 text-neutral-500 hover:text-neutral-200 transition-colors group w-fit"
-      >
-        <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-        <span>{t('common.backToLaunchpad')}</span>
-      </button>
+        label={t('common.backToDashboard')}
+      />
 
       {/* Household Hero */}
       <Card className="p-8 rounded-[2.5rem] relative overflow-hidden">
@@ -389,6 +402,26 @@ export default function HouseholdManagement({ household, onBack, onUpdate }: Hou
           )}
         </div>
       </div>
+
+      {/* Danger Zone */}
+      {isCreator && (
+        <Card className="p-8 rounded-[2rem] border-red-500/20 bg-red-500/5">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="text-center md:text-left">
+              <h3 className="text-sm font-semibold text-red-500 uppercase tracking-widest ml-1 mb-2">Danger Zone</h3>
+              <p className="text-neutral-500 text-sm">Once you delete a household, there is no going back. Please be certain.</p>
+            </div>
+            <Button 
+              variant="danger"
+              onClick={handleDeleteHousehold}
+              isLoading={deactivateHouseholdMutation.isPending}
+              icon={<Trash2 size={18} />}
+            >
+              {t('household.management.deleteHousehold')}
+            </Button>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

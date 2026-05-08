@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, type JSX } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from "./components/Navbar"
@@ -9,10 +9,10 @@ import Profile from "./components/Profile"
 import Landing from "./components/Landing"
 import HouseholdSetup from "./components/HouseholdSetup"
 import HouseholdManagement from "./components/HouseholdManagement"
-import { ArrowLeft } from 'lucide-react';
 import { Button } from './components/ui/Button';
 import { useMyHouseholds } from './hooks/useHouseholds';
 import { useProfile, useLogout } from './hooks/useProfile';
+import { ReturnButton } from './components/ui/ReturnButton';
 
 // --- Protected Route Wrapper ---
 const ProtectedRoute = ({ children, isAuthenticated }: { children: JSX.Element, isAuthenticated: boolean }) => {
@@ -58,8 +58,6 @@ function App() {
       
       if (households.length === 0 && !isPublicPath) {
         navigate('/setup-household', { replace: true });
-      } else if (households.length > 0 && location.pathname === '/setup-household') {
-        navigate('/', { replace: true });
       }
     }
   }, [isAuthenticated, isLoadingHouseholds, households.length, location.pathname, navigate]);
@@ -76,14 +74,23 @@ function App() {
   const handleLogout = () => {
     setIsAuthenticated(false);
     setActiveHouseholdId(null);
+    localStorage.removeItem('userId'); // Clear userId on logout
     logout();
   };
 
-  const handleLoginSuccess = (token: string, name: string) => {
+  const handleLoginSuccess = (token: string, userId: string, name: string) => {
     localStorage.setItem('token', token);
+    localStorage.setItem('userId', userId);
     localStorage.setItem('userName', name);
     setIsAuthenticated(true);
   };
+
+  // Sync userId from profile query if missing
+  useEffect(() => {
+    if (profile?.id && !localStorage.getItem('userId')) {
+      localStorage.setItem('userId', profile.id);
+    }
+  }, [profile]);
 
   if (isAuthenticated && isLoadingHouseholds) {
     return (
@@ -137,13 +144,10 @@ function App() {
           <Route path="/groceries" element={
             <ProtectedRoute isAuthenticated={isAuthenticated}>
               <div className="w-full max-w-5xl flex flex-col items-start gap-6">
-                <Button 
-                  variant="ghost"
+                <ReturnButton 
                   onClick={() => navigate('/')}
-                  icon={ArrowLeft}
-                >
-                  {t('common.backToLaunchpad')}
-                </Button>
+                  label={t('common.backToDashboard')}
+                />
                 <ReceiptSplitter />
               </div>
             </ProtectedRoute>
@@ -165,11 +169,11 @@ function App() {
 
           <Route path="/setup-household" element={
             <ProtectedRoute isAuthenticated={isAuthenticated}>
-              {households.length === 0 ? (
-                <HouseholdSetup onSuccess={refetchHouseholds} />
-              ) : (
-                <Navigate to="/" replace />
-              )}
+              <HouseholdSetup onSuccess={(id) => {
+                refetchHouseholds();
+                setActiveHouseholdId(id);
+                navigate('/');
+              }} />
             </ProtectedRoute>
           } />
 

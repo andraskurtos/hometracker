@@ -1,7 +1,6 @@
 {
   "common": {
     "appName": "HomeTracker",
-    "backToLaunchpad": "Back to Launchpad",
     "backToDashboard": "Back to Dashboard",
     "profileSettings": "Profile Settings",
     "logOut": "Log Out",
@@ -129,6 +128,8 @@
       "kick": "Kick from Household",
       "confirmKick": "Are you sure you want to remove this member?",
       "confirmPromote": "Are you sure you want to grant admin rights to this member?",
+      "deleteHousehold": "Delete Household",
+      "confirmDelete": "Are you sure you want to PERMANENTLY delete this household and all its data? This action cannot be undone.",
       "errors": {
         "regenerateFailed": "Failed to regenerate code.",
         "updateFailed": "Update failed."

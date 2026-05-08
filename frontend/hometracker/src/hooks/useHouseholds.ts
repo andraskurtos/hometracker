@@ -79,3 +79,13 @@ export const useCreateHousehold = () => {
     },
   });
 };
+
+export const useDeactivateHousehold = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => householdService.deactivateHousehold(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.households.list() });
+    },
+  });
+};

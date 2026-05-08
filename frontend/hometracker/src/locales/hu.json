@@ -1,7 +1,6 @@
 {
   "common": {
     "appName": "HomeTracker",
-    "backToLaunchpad": "Vissza az irányítópulthoz",
     "backToDashboard": "Vissza a kezdőlapra",
     "profileSettings": "Profil beállítások",
     "logOut": "Kijelentkezés",

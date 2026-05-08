@@ -8,7 +8,7 @@ import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 
 interface LoginProps {
-  onLoginSuccess: (token: string, userName: string) => void;
+  onLoginSuccess: (token: string, userId: string, userName: string) => void;
   initialMode: 'login' | 'register';
 }
 
@@ -47,7 +47,7 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
     try {
       if (mode === 'login') {
         const data = await userService.login(email, password);
-        onLoginSuccess(data.access_token, data.user.first_name);
+        onLoginSuccess(data.access_token, data.user.id, data.user.first_name);
       } else {
         await userService.register(email, password, firstName, lastName);
         setSuccess(t('auth.accountCreated'));

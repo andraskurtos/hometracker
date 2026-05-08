@@ -103,7 +103,7 @@ export default function ReceiptSplitter(): JSX.Element {
           variant="emerald"
           className="w-16 h-16 rounded-full shadow-2xl !p-0 flex items-center justify-center"
           onClick={() => setIsModalOpen(true)}
-          icon={Plus}
+          icon={<Plus size={24} />}
         />
       </div>
 

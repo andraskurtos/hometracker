@@ -23,6 +23,7 @@ export interface Household {
     base_currency: string;
     role: string;
     joined_at: string;
+    created_by: string;
 }
 
 export interface HouseholdMember {
@@ -132,6 +133,17 @@ export const householdService = {
 
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail || "Failed to kick member");
+        return data;
+    },
+
+    deactivateHousehold: async (householdId: number) => {
+        const response = await fetch(`${API_BASE_URL}/household/${householdId}/deactivate`, {
+            method: 'PUT',
+            headers: getHeaders(),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Failed to deactivate household");
         return data;
     }
 };

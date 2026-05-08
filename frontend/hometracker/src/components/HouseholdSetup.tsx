@@ -7,7 +7,7 @@ import { Input } from './ui/Input';
 import { useCreateHousehold, useJoinHousehold } from '../hooks/useHouseholds';
 
 interface HouseholdSetupProps {
-  onSuccess: () => void;
+  onSuccess: (id: number) => void;
 }
 
 export default function HouseholdSetup({ onSuccess }: HouseholdSetupProps) {
@@ -23,12 +23,12 @@ export default function HouseholdSetup({ onSuccess }: HouseholdSetupProps) {
     e.preventDefault();
     setError('');
     try {
-      await createMutation.mutateAsync({ 
+      const newHousehold = await createMutation.mutateAsync({ 
         name: createData.name, 
         description: createData.description, 
         baseCurrency: createData.baseCurrency 
       });
-      onSuccess();
+      onSuccess(newHousehold.id);
     } catch (err: any) {
       setError(err.message);
     }
@@ -38,8 +38,8 @@ export default function HouseholdSetup({ onSuccess }: HouseholdSetupProps) {
     e.preventDefault();
     setError('');
     try {
-      await joinMutation.mutateAsync(joinCode);
-      onSuccess();
+      const joinedHousehold = await joinMutation.mutateAsync(joinCode);
+      onSuccess(joinedHousehold.id);
     } catch (err: any) {
       setError(err.message);
     }
