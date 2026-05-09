@@ -40,13 +40,18 @@ export interface BackendReceipt {
 }
 
 // --- TYPES EXPECTED BY UI ---
+export interface UIOwner {
+  userId: string;
+  percentage: number;
+}
+
 export interface UIItem {
   id: number;
   name: string;
   qty: number;
   size: string;
   price: number;
-  owners: string[]; // List of user IDs
+  owners: UIOwner[]; 
 }
 
 export interface UIReceipt {
@@ -102,7 +107,10 @@ export const receiptService = {
         qty: item.quantity,
         size: formatSize(item.size, item.size_type),
         price: Number(item.price_paid),
-        owners: item.owners.map(o => o.id),
+        owners: item.owners.map(o => ({
+          userId: o.id,
+          percentage: Number(o.percentage)
+        })),
       }))
     }));
   },

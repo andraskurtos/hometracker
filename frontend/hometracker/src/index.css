@@ -9,3 +9,43 @@
     display: none;
   }
 }
+
+@theme {
+  --animate-popup-in: popup-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-popup-out: popup-out 0.2s cubic-bezier(0.7, 0, 0.84, 0);
+
+  @keyframes popup-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes popup-out {
+    from {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(10px) scale(0.95);
+    }
+  }
+}
+
+@layer base {
+  /* Remove spinners from number inputs */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type=number] {
+    -moz-appearance: textfield;
+  }
+}
