@@ -9,7 +9,6 @@ import Profile from "./components/Profile"
 import Landing from "./components/Landing"
 import HouseholdSetup from "./components/HouseholdSetup"
 import HouseholdManagement from "./components/HouseholdManagement"
-import { Button } from './components/ui/Button';
 import { useMyHouseholds } from './hooks/useHouseholds';
 import { useProfile, useLogout } from './hooks/useProfile';
 import { ReturnButton } from './components/ui/ReturnButton';
@@ -116,79 +115,81 @@ function App() {
       />
       
       <main className="flex-1 flex flex-col items-center justify-start p-6 pt-12">
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/landing" element={
-            !isAuthenticated ? <Landing onLoginClick={() => navigate('/login')} /> : <Navigate to="/" />
-          } />
-          
-          <Route path="/login" element={
-            !isAuthenticated ? <Login onLoginSuccess={handleLoginSuccess} initialMode="login" /> : <Navigate to="/" />
-          } />
+        <div key={location.key} className="w-full flex flex-col items-center animate-page-in">
+          <Routes location={location}>
+            {/* Public Routes */}
+            <Route path="/landing" element={
+              !isAuthenticated ? <Landing onLoginClick={() => navigate('/login')} /> : <Navigate to="/" />
+            } />
+            
+            <Route path="/login" element={
+              !isAuthenticated ? <Login onLoginSuccess={handleLoginSuccess} initialMode="login" /> : <Navigate to="/" />
+            } />
 
-          <Route path="/register" element={
-            !isAuthenticated ? <Login onLoginSuccess={handleLoginSuccess} initialMode="register" /> : <Navigate to="/" />
-          } />
+            <Route path="/register" element={
+              !isAuthenticated ? <Login onLoginSuccess={handleLoginSuccess} initialMode="register" /> : <Navigate to="/" />
+            } />
 
-          {/* Protected Routes */}
-          <Route path="/" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated}>
-              {households.length > 0 ? (
-                <Launchpad />
-              ) : (
-                <Navigate to="/setup-household" replace />
-              )}
-            </ProtectedRoute>
-          } />
+            {/* Protected Routes */}
+            <Route path="/" element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                {households.length > 0 ? (
+                  <Launchpad />
+                ) : (
+                  <Navigate to="/setup-household" replace />
+                )}
+              </ProtectedRoute>
+            } />
 
-          <Route path="/groceries" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated}>
-              <div className="w-full max-w-5xl flex flex-col items-start gap-6">
-                <ReturnButton 
-                  onClick={() => navigate('/')}
-                  label={t('common.backToDashboard')}
-                />
-                <ReceiptSplitter householdId={activeHousehold?.id || null} />
-              </div>
-            </ProtectedRoute>
-          } />
+            <Route path="/groceries" element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <div className="w-full max-w-5xl flex flex-col items-start gap-6">
+                  <ReturnButton 
+                    onClick={() => navigate('/')}
+                    label={t('common.backToDashboard')}
+                  />
+                  <ReceiptSplitter householdId={activeHousehold?.id || null} />
+                </div>
+              </ProtectedRoute>
+            } />
 
-          <Route path="/household" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated}>
-              {activeHousehold ? (
-                <HouseholdManagement 
-                  household={activeHousehold} 
+            <Route path="/household" element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                {activeHousehold ? (
+                  <HouseholdManagement 
+                    household={activeHousehold} 
+                    onBack={() => navigate('/')} 
+                    onUpdate={refetchHouseholds}
+                  />
+                ) : (
+                  <Navigate to="/setup-household" replace />
+                )}
+              </ProtectedRoute>
+            } />
+
+            <Route path="/setup-household" element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <HouseholdSetup onSuccess={(id: string) => {
+                  refetchHouseholds();
+                  setActiveHouseholdId(id);
+                  navigate('/');
+                }} />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/profile" element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <Profile 
+                  userName={userName} 
                   onBack={() => navigate('/')} 
-                  onUpdate={refetchHouseholds}
                 />
-              ) : (
-                <Navigate to="/setup-household" replace />
-              )}
-            </ProtectedRoute>
-          } />
+              </ProtectedRoute>
+            } />
 
-          <Route path="/setup-household" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated}>
-              <HouseholdSetup onSuccess={(id: string) => {
-                refetchHouseholds();
-                setActiveHouseholdId(id);
-                navigate('/');
-              }} />
-            </ProtectedRoute>
-          } />
-
-          <Route path="/profile" element={
-            <ProtectedRoute isAuthenticated={isAuthenticated}>
-              <Profile 
-                userName={userName} 
-                onBack={() => navigate('/')} 
-              />
-            </ProtectedRoute>
-          } />
-
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/landing"} replace />} />
-        </Routes>
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/landing"} replace />} />
+          </Routes>
+        </div>
       </main>
     </div>
   )

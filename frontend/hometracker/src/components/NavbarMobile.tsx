@@ -1,4 +1,4 @@
-import { Menu, X, Home, User, LogOut, Languages, ChevronDown, Settings, Plus } from 'lucide-react';
+import { Menu, X, User, LogOut, Settings, Plus } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { NavbarProps } from './Navbar';
 
@@ -7,7 +7,7 @@ interface MobileProps extends NavbarProps {
 }
 
 export const NavbarMobile = ({ logic, ...props }: MobileProps) => {
-  const { t, i18n, isMenuOpen, setIsMenuOpen, languages, currentLanguage } = logic;
+  const { t, i18n, isMenuOpen, setIsMenuOpen, languages } = logic;
   const navigate = useNavigate();
 
   return (

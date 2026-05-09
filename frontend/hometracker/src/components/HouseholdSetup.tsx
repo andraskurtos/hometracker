@@ -7,7 +7,7 @@ import { Input } from './ui/Input';
 import { useCreateHousehold, useJoinHousehold } from '../hooks/useHouseholds';
 
 interface HouseholdSetupProps {
-  onSuccess: (id: number) => void;
+  onSuccess: (id: string) => void;
 }
 
 export default function HouseholdSetup({ onSuccess }: HouseholdSetupProps) {

@@ -10,7 +10,7 @@ export interface NavbarProps {
   isAuthenticated: boolean;
   households: Household[];
   activeHousehold: Household | null;
-  onSelectHousehold?: (id: number) => void;
+  onSelectHousehold?: (id: string) => void;
   onManageHousehold?: () => void;
 }
 

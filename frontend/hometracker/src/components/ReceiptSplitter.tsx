@@ -26,6 +26,7 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
   // --- LOCAL STATE ---
   const [receipts, setReceipts] = useState<UIReceipt[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  const [closingReceiptIds, setClosingReceiptIds] = useState<Set<number>>(new Set());
   const [activeSplit, setActiveSplit] = useState<{ receiptId: number, item: UIItem } | null>(null);
   const [isClosing, setIsClosing] = useState(false);
   const [splitMode, setSplitMode] = useState<SplitMode>('percent');
@@ -52,7 +53,7 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
     setTimeout(() => {
       setActiveSplit(null);
       setIsClosing(false);
-    }, 200); // Match animation duration
+    }, 200); // Match index.css animate-popup-out (0.2s)
   };
 
   // Handle click outside for split dropdown
@@ -70,12 +71,23 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
 
   // --- UI INTERACTION LOGIC ---
   const toggleAccordion = (id: number): void => {
-    setExpandedIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) newSet.delete(id);
-      else newSet.add(id);
-      return newSet;
-    });
+    if (expandedIds.has(id)) {
+      setClosingReceiptIds(prev => new Set(prev).add(id));
+      setTimeout(() => {
+        setExpandedIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
+        setClosingReceiptIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
+      }, 300); // Match index.css animate-slide-up (0.3s)
+    } else {
+      setExpandedIds(prev => new Set(prev).add(id));
+    }
   };
 
   const openSplitMenu = (receiptId: number, item: UIItem) => {
@@ -83,7 +95,7 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
     setIsClosing(false);
     setSplitMode('percent'); // Reset to percent by default
     
-    // Initialize temp shares from item owners
+    // Initialize temp shares from item owners (always percentages from backend)
     const initialShares: Record<string, number> = {};
     item.owners.forEach(o => {
       initialShares[o.userId] = o.percentage;
@@ -91,21 +103,28 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
     setTempShares(initialShares);
   };
 
-  const calculateEvenSplit = (selectedUserIds: string[]) => {
-    if (selectedUserIds.length === 0) return {};
+  const handleModeSwitch = (newMode: SplitMode) => {
+    if (newMode === splitMode || !activeSplit) return;
     
-    const count = selectedUserIds.length;
-    const baseShare = Math.floor((100 / count) * 100) / 100;
-    const remainder = Math.round((100 - (baseShare * count)) * 100) / 100;
+    const qty = activeSplit.item.qty;
+    const nextShares: Record<string, number> = {};
     
-    const newShares: Record<string, number> = {};
-    selectedUserIds.forEach((uid, idx) => {
-      newShares[uid] = idx === 0 ? Math.round((baseShare + remainder) * 100) / 100 : baseShare;
+    Object.keys(tempShares).forEach(uid => {
+      if (newMode === 'pcs') {
+        // From percent to pcs: (pct / 100) * qty
+        nextShares[uid] = Math.round(((tempShares[uid] || 0) / 100) * qty * 100) / 100;
+      } else {
+        // From pcs to percent: (val / qty) * 100
+        nextShares[uid] = Math.round(((tempShares[uid] || 0) / qty) * 100 * 100) / 100;
+      }
     });
-    return newShares;
+    
+    setTempShares(nextShares);
+    setSplitMode(newMode);
   };
 
   const toggleUserInSplit = (userId: string) => {
+    if (!activeSplit) return;
     const currentUsers = Object.keys(tempShares).filter(uid => tempShares[uid] > 0);
     const isAlreadyIn = tempShares[userId] > 0;
     
@@ -115,31 +134,41 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
     } else {
       nextUsers = [...currentUsers, userId];
     }
+
+    if (nextUsers.length === 0) {
+      setTempShares({});
+      return;
+    }
     
-    const newShares = calculateEvenSplit(nextUsers);
+    const target = splitMode === 'percent' ? 100 : activeSplit.item.qty;
+    const baseShare = Math.floor((target / nextUsers.length) * 100) / 100;
+    const remainder = Math.round((target - (baseShare * nextUsers.length)) * 100) / 100;
+    
+    const newShares: Record<string, number> = {};
+    nextUsers.forEach((uid, idx) => {
+      newShares[uid] = idx === 0 ? Math.round((baseShare + remainder) * 100) / 100 : baseShare;
+    });
     setTempShares(newShares);
   };
 
   const handleShareChange = (userId: string, value: string) => {
     const numValue = parseFloat(value) || 0;
-    
-    if (splitMode === 'percent') {
-      setTempShares(prev => ({ ...prev, [userId]: numValue }));
-    } else {
-      // Convert pcs to percentage
-      const totalQty = activeSplit?.item.qty || 1;
-      const percentage = (numValue / totalQty) * 100;
-      setTempShares(prev => ({ ...prev, [userId]: Math.round(percentage * 100) / 100 }));
-    }
+    setTempShares(prev => ({ ...prev, [userId]: numValue }));
   };
 
   const saveSplit = () => {
     if (!activeSplit) return;
 
-    // TODO: Call API to save split
+    const { isValid } = getSplitMetrics();
+    if (!isValid) return;
+
+    const qty = activeSplit.item.qty;
     const updatedOwners: UIOwner[] = Object.entries(tempShares)
-      .filter(([_, pct]) => pct > 0)
-      .map(([uid, pct]) => ({ userId: uid, percentage: pct }));
+      .filter(([_, val]) => val > 0)
+      .map(([uid, val]) => ({ 
+        userId: uid, 
+        percentage: splitMode === 'percent' ? val : (val / qty) * 100 
+      }));
 
     setReceipts(prev => prev.map(r => {
       if (r.id !== activeSplit.receiptId) return r;
@@ -154,6 +183,17 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
 
     closeSplitMenu();
   };
+
+  const getSplitMetrics = () => {
+    if (!activeSplit) return { total: 0, target: 0, isValid: false };
+    const currentTotal = Object.values(tempShares).reduce((a, b) => a + b, 0);
+    const target = splitMode === 'percent' ? 100 : activeSplit.item.qty;
+    // Allow very small epsilon for float precision
+    const isValid = Math.abs(currentTotal - target) < 0.001;
+    return { total: currentTotal, target, isValid };
+  };
+
+  const { total: currentSplitTotal, target: splitTarget, isValid: isSplitValid } = getSplitMetrics();
 
   // --- UPLOAD LOGIC ---
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -186,11 +226,13 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
     <div className="w-full h-full flex flex-col relative">
       <div className="fixed bottom-10 right-10 z-40">
         <Button 
-          variant="emerald"
+          variant="primary"
           className="w-16 h-16 rounded-full shadow-2xl !p-0 flex items-center justify-center"
           onClick={() => setIsModalOpen(true)}
           icon={<Plus size={24} />}
-        />
+        >
+          {''}
+        </Button>
       </div>
 
       <div className="flex flex-col gap-6 w-full max-w-4xl mx-auto p-4 mb-24">
@@ -214,12 +256,12 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
                 </div>
                 <div className="flex items-center gap-6">
                   <p className="text-xl font-black text-emerald-400">{receipt.items.reduce((sum, item) => sum + item.price * item.qty, 0).toLocaleString()}</p>
-                  <ChevronDown className={`text-neutral-600 transition-transform duration-300 ${expandedIds.has(receipt.id) ? 'rotate-180' : ''}`} size={24} />
+                  <ChevronDown className={`text-neutral-600 transition-transform duration-300 ${expandedIds.has(receipt.id) && !closingReceiptIds.has(receipt.id) ? 'rotate-180' : ''}`} size={24} />
                 </div>
               </div>
 
-              {expandedIds.has(receipt.id) && (
-                <div className="border-t border-neutral-800/60 p-6 bg-neutral-950/30 animate-in slide-in-from-top-2 duration-300">
+              {(expandedIds.has(receipt.id) || closingReceiptIds.has(receipt.id)) && (
+                <div className={`border-t border-neutral-800/60 p-6 bg-neutral-950/30 overflow-hidden ${closingReceiptIds.has(receipt.id) ? 'animate-slide-up' : 'animate-slide-down'}`}>
                   <div className="overflow-x-auto overflow-visible">
                     <table className="w-full text-left">
                       <thead>
@@ -275,9 +317,7 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
                                   <div className="flex flex-col gap-3 max-h-96 overflow-y-auto pr-0 scrollbar-hide">
                                     {members.map(member => {
                                       const isSelected = tempShares[member.id] > 0;
-                                      const displayValue = splitMode === 'percent' 
-                                        ? (tempShares[member.id] || 0)
-                                        : (Math.round(((tempShares[member.id] || 0) / 100) * item.qty * 100) / 100);
+                                      const displayValue = tempShares[member.id] || 0;
 
                                       return (
                                         <Card 
@@ -311,7 +351,7 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
                                               type="number"
                                               value={displayValue}
                                               onChange={(e) => handleShareChange(member.id, e.target.value)}
-                                              className="w-24 bg-neutral-950 border-2 border-neutral-800 rounded-2xl px-3 py-2.5 text-lg font-black font-mono text-emerald-400 text-right focus:outline-none focus:border-emerald-500 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-inner"
+                                              className="w-24 bg-neutral-950 border-2 border-neutral-800 rounded-2xl px-3 py-2.5 text-lg font-black text-emerald-400 text-right focus:outline-none focus:border-emerald-500 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-inner"
                                               placeholder="0"
                                               step="0.01"
                                             />
@@ -324,30 +364,39 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
                                     })}
                                   </div>
 
-                                  <div className="flex items-center gap-4 mt-6 pt-6 border-t-2 border-neutral-800/50">
-                                    <div className="flex bg-neutral-950 p-2 rounded-2xl border-2 border-neutral-800 shadow-inner">
-                                      <button 
-                                        onClick={() => setSplitMode('percent')}
-                                        className={`p-2.5 rounded-xl transition-all ${splitMode === 'percent' ? 'bg-neutral-800 text-emerald-400 shadow-xl' : 'text-neutral-600 hover:text-neutral-400'}`}
-                                        title="Percentage"
-                                      >
-                                        <Percent size={20} />
-                                      </button>
-                                      <button 
-                                        onClick={() => setSplitMode('pcs')}
-                                        className={`p-2.5 rounded-xl transition-all ${splitMode === 'pcs' ? 'bg-neutral-800 text-emerald-400 shadow-xl' : 'text-neutral-600 hover:text-neutral-400'}`}
-                                        title="Pieces"
-                                      >
-                                        <Hash size={20} />
-                                      </button>
+                                  <div className="flex flex-col gap-4 mt-6 pt-6 border-t-2 border-neutral-800/50">
+                                    <div className="flex items-center justify-between px-2">
+                                      <div className="flex flex-col">
+                                        <span className="text-[10px] font-black text-neutral-600 uppercase tracking-widest">Current Total</span>
+                                        <span className={`text-sm font-black font-mono ${isSplitValid ? 'text-emerald-500' : 'text-amber-500'}`}>
+                                          {currentSplitTotal.toFixed(2)} / {splitTarget} {splitMode === 'percent' ? '%' : 'pcs'}
+                                        </span>
+                                      </div>
+                                      <div className="flex bg-neutral-950 p-1.5 rounded-2xl border-2 border-neutral-800 shadow-inner">
+                                        <button 
+                                          onClick={() => handleModeSwitch('percent')}
+                                          className={`p-2 rounded-xl transition-all ${splitMode === 'percent' ? 'bg-neutral-800 text-emerald-400 shadow-xl' : 'text-neutral-600 hover:text-neutral-400'}`}
+                                          title="Percentage"
+                                        >
+                                          <Percent size={18} />
+                                        </button>
+                                        <button 
+                                          onClick={() => handleModeSwitch('pcs')}
+                                          className={`p-2 rounded-xl transition-all ${splitMode === 'pcs' ? 'bg-neutral-800 text-emerald-400 shadow-xl' : 'text-neutral-600 hover:text-neutral-400'}`}
+                                          title="Pieces"
+                                        >
+                                          <Hash size={18} />
+                                        </button>
+                                      </div>
                                     </div>
                                     
                                     <Button 
                                       variant="primary" 
-                                      className="flex-1 !py-4 text-sm font-black uppercase tracking-[0.2em] shadow-emerald-500/20 shadow-xl rounded-2xl"
+                                      className="w-full !py-4 text-sm font-black uppercase tracking-[0.2em] shadow-emerald-500/20 shadow-xl rounded-2xl"
                                       onClick={saveSplit}
+                                      disabled={!isSplitValid}
                                     >
-                                      Apply Split
+                                      {isSplitValid ? 'Apply Split' : 'Invalid Split'}
                                     </Button>
                                   </div>
                                 </div>
@@ -389,7 +438,7 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
             </div>
             <div className="flex gap-4">
               <Button variant="neutral" className="flex-1" onClick={() => setIsModalOpen(false)}>{t('common.cancel')}</Button>
-              <Button variant="emerald" className="flex-1" onClick={handleUpload} isLoading={uploadMutation.isPending} disabled={!selectedFile}>{uploadMutation.isPending ? t('groceries.modal.analyzing') : t('groceries.modal.submit')}</Button>
+              <Button variant="primary" className="flex-1" onClick={handleUpload} isLoading={uploadMutation.isPending} disabled={!selectedFile}>{uploadMutation.isPending ? t('groceries.modal.analyzing') : t('groceries.modal.submit')}</Button>
             </div>
           </Card>
         </div>
