@@ -73,7 +73,7 @@ export const GlobalDebtSummary = ({ householdId, currency = 'HUF' }: GlobalDebtS
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-black text-neutral-100">{member.display_name || member.first_name}</span>
-                    <Badge variant="neutral" className="text-[8px] uppercase font-black px-1.5 py-0.5 opacity-50">{t('groceries.debts.payee')}</Badge>
+                    {isDesktop && <Badge variant="neutral" className="text-[8px] uppercase font-black px-1.5 py-0.5 opacity-50">{t('groceries.debts.payee')}</Badge>}
                   </div>
                 </div>
               </div>

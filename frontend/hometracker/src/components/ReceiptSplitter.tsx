@@ -10,6 +10,7 @@ import { Badge } from './ui/Badge';
 import { useReceipts, useUploadReceipt, useUpdateItemOwners, useReceiptDebts } from '../hooks/useReceipts';
 import { useHouseholdMembers } from '../hooks/useHouseholds';
 import { getAssetUrl } from '../utils/assetUtils';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 
 interface ReceiptSplitterProps {
   householdId: string | null;
@@ -20,6 +21,7 @@ type SplitMode = 'percent' | 'pcs';
 // --- SUB-COMPONENT: DEBT BREAKDOWN ---
 const DebtBreakdown = ({ receiptId, settled, members }: { receiptId: number, settled: boolean, members: any[] }) => {
   const { t } = useTranslation();
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
   const { data: debts, isLoading } = useReceiptDebts(receiptId);
   const currentUserId = localStorage.getItem('userId');
 
@@ -51,8 +53,12 @@ const DebtBreakdown = ({ receiptId, settled, members }: { receiptId: number, set
           <div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-black text-neutral-100">{getMember(debts.payee)?.display_name || getMember(debts.payee)?.first_name}</span>
-              <Badge variant="emerald" className="text-[9px] uppercase font-black px-1.5 py-0.5">{t('groceries.debts.payee')}</Badge>
-              {debts.payee === currentUserId && <Badge variant="neutral" className="text-[9px] uppercase font-black px-1.5 py-0.5">{t('common.you')}</Badge>}
+              {isDesktop && (
+                <>
+                    <Badge variant="emerald" className="text-[9px] uppercase font-black px-1.5 py-0.5">{t('groceries.debts.payee')}</Badge>
+                    {debts.payee === currentUserId && <Badge variant="neutral" className="text-[9px] uppercase font-black px-1.5 py-0.5">{t('common.you')}</Badge>}
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -77,8 +83,12 @@ const DebtBreakdown = ({ receiptId, settled, members }: { receiptId: number, set
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-black text-neutral-100">{getMember(d.debtor)?.display_name || getMember(d.debtor)?.first_name}</span>
-                <Badge variant="neutral" className="text-[8px] uppercase font-black px-1.5 py-0.5 opacity-50">{t('groceries.debts.debtor')}</Badge>
-                {d.debtor === currentUserId && <Badge variant="neutral" className="text-[8px] uppercase font-black px-1.5 py-0.5">{t('common.you')}</Badge>}
+                {isDesktop && (
+                    <>
+                        <Badge variant="neutral" className="text-[8px] uppercase font-black px-1.5 py-0.5 opacity-50">{t('groceries.debts.debtor')}</Badge>
+                        {d.debtor === currentUserId && <Badge variant="neutral" className="text-[8px] uppercase font-black px-1.5 py-0.5">{t('common.you')}</Badge>}
+                    </>
+                )}
               </div>
             </div>
             <span className={`text-lg font-black ${settled ? 'text-emerald-500' : 'text-red-500'}`}>
@@ -106,6 +116,7 @@ const SplitMenu = React.memo(({
   onSuccess: () => void
 }) => {
   const { t } = useTranslation();
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
   const { data: members = [] } = useHouseholdMembers(householdId);
   const updateOwnersMutation = useUpdateItemOwners();
   const dropdownRef = useRef<HTMLDivElement>(null);
