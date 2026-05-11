@@ -32,6 +32,7 @@ export interface HouseholdMember {
     last_name: string;
     display_name: string | null;
     profile_pic_url: string | null;
+    revolut_username: string | null;
     role: 'admin' | 'member';
     joined_at: string;
 }
@@ -42,7 +43,22 @@ export interface HouseholdUpdate {
     base_currency?: string;
 }
 
+export interface GrossDebt {
+    payee: string;
+    amount: number;
+}
+
 export const householdService = {
+    fetchGrossDebts: async (householdId: string, userId: string): Promise<GrossDebt[]> => {
+        const response = await fetch(`${API_BASE_URL}/household/${householdId}/debts/${userId}`, {
+            headers: getHeaders(),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Failed to fetch debts");
+        // The API returns {status: "success", data: [...]} or a list directly depending on implementation
+        return data.data || data;
+    },
     createHousehold: async (name: string, description?: string, baseCurrency: string = "HUF") => {
         const response = await fetch(`${API_BASE_URL}/household/`, {
             method: 'POST',

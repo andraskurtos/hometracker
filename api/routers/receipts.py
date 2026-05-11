@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from pydantic import BaseModel
+from typing import List
 from routers.auth import get_current_user_id
 from config import DB_CONFIG, logger
 from receipt_reader import ReceiptReader as reader
@@ -9,6 +11,13 @@ router = APIRouter(
     prefix="/api/receipts",
     tags=["Receipts"]
 )
+
+class OwnerUpdate(BaseModel):
+    id: str # user_id
+    amount: float
+
+class OwnersUpdate(BaseModel):
+    owners: List[OwnerUpdate]
 
 @router.post("/parse")
 async def parse_receipt(
@@ -48,14 +57,15 @@ async def parse_receipt(
 
         # Step B: INSERT RECEIPT
         cur.execute("""
-            INSERT INTO receipts (store_id, total, payment_method, household_id)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO receipts (store_id, total, payment_method, household_id, payee)
+            VALUES (%s, %s, %s, %s, %s)
             RETURNING id;
         """, (
             store_id, 
             parsed_data["receipt"]["total_amount"], 
             parsed_data["receipt"]["payment_method"],
-            household_id
+            household_id,
+            user_id
         ))
         receipt_id = cur.fetchone()[0]
 
@@ -87,10 +97,13 @@ async def parse_receipt(
             """, (receipt_id, item_id, item["quantity"], item["price_paid"]))
             
             receipt_item_id = cur.fetchone()[0]
+            
+            # Initial owner is the payee with 100% of the amount
+            total_item_price = round(item["quantity"] * item["price_paid"], 2)
             cur.execute("""
-                            INSERT INTO item_owners (receipt_item_id, user_id, percentage)
-                            VALUES (%s, %s, 100.00);
-                        """, (receipt_item_id, user_id))
+                            INSERT INTO item_owners (receipt_item_id, user_id, amount)
+                            VALUES (%s, %s, %s);
+                        """, (receipt_item_id, user_id, total_item_price))
             
         # --- END PIPELINE ---
         
@@ -137,6 +150,8 @@ def get_household_receipts(household_id: str, user_id: str = Depends(get_current
                 r.total as total_amount, 
                 r.payment_method, 
                 r.created_at,
+                r.payee,
+                r.settled,
                 s.name as store_name
             FROM receipts r
             JOIN stores s ON r.store_id = s.id
@@ -160,7 +175,7 @@ def get_household_receipts(household_id: str, user_id: str = Depends(get_current
                     json_agg(
                         json_build_object(
                             'id', io.user_id,
-                            'percentage', io.percentage
+                            'amount', io.amount
                         )
                     ) FILTER (WHERE io.id IS NOT NULL),
                     '[]'
@@ -182,6 +197,9 @@ def get_household_receipts(household_id: str, user_id: str = Depends(get_current
             
             item_data = dict(item)
             del item_data["receipt_id"]
+            # Convert decimal back to float for JSON
+            for o in item_data['owners']:
+                o['amount'] = float(o['amount'])
             items_by_receipt[r_id].append(item_data)
         
         final_output = []
@@ -190,9 +208,11 @@ def get_household_receipts(household_id: str, user_id: str = Depends(get_current
             final_output.append({
                 "id": r_id,
                 "store": {"name": receipt["store_name"]},
-                "total_amount": receipt["total_amount"],
+                "total_amount": float(receipt["total_amount"]),
                 "payment_method": receipt["payment_method"],
                 "created_at": receipt["created_at"].isoformat(),
+                "payee": receipt["payee"],
+                "settled": receipt["settled"],
                 "items": items_by_receipt.get(r_id, [])
             })
 
@@ -208,3 +228,142 @@ def get_household_receipts(household_id: str, user_id: str = Depends(get_current
         if conn:
             cur.close()
             conn.close()
+
+@router.put("/{receipt_id}/{receipt_item_id}")
+def update_item_owners(
+    receipt_id: int,
+    receipt_item_id: int,
+    payload: OwnersUpdate,
+    user_id: str = Depends(get_current_user_id)
+):
+    """
+    Updates owners for a specific receipt item.
+    URL: /api/receipts/{receipt_id}/{receipt_item_id}
+    """
+    conn = None
+    cur = None
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # 1. Verify that the receipt exists and the requester is the payee
+        cur.execute("""
+            SELECT payee FROM receipts WHERE id = %s;
+        """, (receipt_id,))
+        
+        receipt = cur.fetchone()
+        if not receipt:
+            raise HTTPException(status_code=404, detail="Receipt not found")
+            
+        if receipt['payee'] != user_id:
+            raise HTTPException(status_code=403, detail="Access denied: Only the payee can modify splitting")
+
+        # 2. Verify that the receipt_item actually belongs to the receipt and get its total price
+        cur.execute("SELECT quantity, price_paid FROM receipt_items WHERE id = %s AND receipt_id = %s", (receipt_item_id, receipt_id))
+        ri = cur.fetchone()
+        if not ri:
+            raise HTTPException(status_code=404, detail="Item not found for this receipt")
+        
+        target_total = round(float(ri["quantity"]) * float(ri["price_paid"]), 2)
+
+        # 3. Validation: Total amount should match target_total (allow small epsilon for float precision)
+        total_amount = sum(o.amount for o in payload.owners)
+        if abs(total_amount - target_total) > 0.001:
+            raise HTTPException(status_code=400, detail=f"Total amount must be {target_total} (got {total_amount})")
+
+        # 4. Atomic update: Delete old owners, Insert new ones
+        cur.execute("DELETE FROM item_owners WHERE receipt_item_id = %s", (receipt_item_id,))
+        
+        for owner in payload.owners:
+            cur.execute("""
+                INSERT INTO item_owners (receipt_item_id, user_id, amount)
+                VALUES (%s, %s, %s)
+            """, (receipt_item_id, owner.id, owner.amount))
+            
+        conn.commit()
+        return {"status": "success", "message": "Item owners updated successfully"}
+
+    except HTTPException:
+        if conn: conn.rollback()
+        raise
+    except Exception as e:
+        if conn: conn.rollback()
+        logger.error(f"Error updating item owners: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
+
+@router.get("/{receipt_id}/debts")
+def get_receipt_debts(
+    receipt_id: int,
+    user_id: str = Depends(get_current_user_id)
+):
+    """
+    Calculates debts for a specific receipt.
+    Returns the payee and the share of each household member.
+    """
+    conn = None
+    cur = None
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # 1. Verify membership and get payee
+        cur.execute("""
+            SELECT r.payee, r.household_id FROM receipts r
+            JOIN household_members hm ON r.household_id = hm.household_id
+            WHERE r.id = %s AND hm.user_id = %s AND hm.is_active = TRUE;
+        """, (receipt_id, user_id))
+        
+        receipt_info = cur.fetchone()
+        if not receipt_info:
+            raise HTTPException(status_code=403, detail="Access denied: You are not a member of the household this receipt belongs to")
+
+        payee_id = receipt_info['payee']
+
+        # 2. Calculate sum of shares per user directly from 'amount' column
+        cur.execute("""
+            SELECT 
+                io.user_id,
+                SUM(io.amount) as total_share
+            FROM receipt_items ri
+            JOIN item_owners io ON ri.id = io.receipt_item_id
+            WHERE ri.receipt_id = %s
+            GROUP BY io.user_id;
+        """, (receipt_id,))
+        
+        shares = cur.fetchall()
+        
+        payee_share = 0
+        debtors = []
+        
+        for s in shares:
+            u_id = s['user_id']
+            u_share = float(s['total_share'])
+            
+            if u_id == payee_id:
+                payee_share = u_share
+            else:
+                debtors.append({
+                    "debtor": u_id,
+                    "debtor_share": u_share
+                })
+
+        return {
+            "payee": payee_id,
+            "payee_share": payee_share,
+            "debtors": debtors
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error calculating debts for receipt {receipt_id}: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
+

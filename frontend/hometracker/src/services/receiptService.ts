@@ -16,7 +16,7 @@ const getHeaders = () => {
 // --- TYPES DECLARED IN BACKEND ---
 export interface BackendOwner {
   id: string;
-  percentage: number;
+  amount: number; // Switched from percentage
 }
 
 export interface BackendItem {
@@ -36,13 +36,26 @@ export interface BackendReceipt {
   total_amount: number;
   payment_method: string;
   created_at: string;
+  payee: string;
+  settled: boolean;
   items: BackendItem[];
+}
+
+export interface BackendDebtor {
+  debtor: string;
+  debtor_share: number;
+}
+
+export interface BackendDebts {
+  payee: string;
+  payee_share: number;
+  debtors: BackendDebtor[];
 }
 
 // --- TYPES EXPECTED BY UI ---
 export interface UIOwner {
   userId: string;
-  percentage: number;
+  amount: number; 
 }
 
 export interface UIItem {
@@ -58,6 +71,9 @@ export interface UIReceipt {
   id: number;
   storeName: string;
   date: string;
+  totalAmount: number;
+  payee: string;
+  settled: boolean;
   items: UIItem[];
 }
 
@@ -101,6 +117,9 @@ export const receiptService = {
       id: receipt.id,
       storeName: receipt.store.name,
       date: formatDate(receipt.created_at),
+      totalAmount: Number(receipt.total_amount),
+      payee: receipt.payee,
+      settled: receipt.settled,
       items: receipt.items.map(item => ({
         id: item.id,
         name: item.name,
@@ -109,10 +128,18 @@ export const receiptService = {
         price: Number(item.price_paid),
         owners: item.owners.map(o => ({
           userId: o.id,
-          percentage: Number(o.percentage)
+          amount: Number(o.amount)
         })),
       }))
     }));
+  },
+
+  fetchReceiptDebts: async (receiptId: number): Promise<BackendDebts> => {
+    const response = await fetch(`${API_BASE_URL}/${receiptId}/debts`, {
+      headers: getHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch debts');
+    return await response.json();
   },
 
   uploadReceipt: async (householdId: string, file: File) => {
@@ -131,6 +158,26 @@ export const receiptService = {
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.detail || 'Upload failed');
+    }
+
+    return await response.json();
+  },
+
+  updateItemOwners: async (receiptId: number, itemId: number, owners: UIOwner[]) => {
+    const response = await fetch(`${API_BASE_URL}/${receiptId}/${itemId}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        owners: owners.map(o => ({
+          id: o.userId,
+          amount: o.amount
+        }))
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to update owners');
     }
 
     return await response.json();

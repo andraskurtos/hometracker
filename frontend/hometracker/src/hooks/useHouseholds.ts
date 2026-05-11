@@ -18,6 +18,14 @@ export const useHouseholdMembers = (householdId: string | null) => {
   });
 };
 
+export const useGrossDebts = (householdId: string | null, userId: string | null) => {
+  return useQuery({
+    queryKey: queryKeys.households.debts(householdId!, userId!),
+    queryFn: () => householdService.fetchGrossDebts(householdId!, userId!),
+    enabled: !!householdId && !!userId,
+  });
+};
+
 export const useUpdateHousehold = () => {
   const queryClient = useQueryClient();
   return useMutation({

@@ -10,7 +10,8 @@
     "loading": "Loading...",
     "dangerZone": "Danger Zone",
     "you": "You",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "settle": "Settle"
   },
   "auth": {
     "signIn": "Sign In",
@@ -149,12 +150,25 @@
     "loading": "Loading receipts...",
     "noReceipts": "No receipts found. Tap the + to scan one!",
     "noItems": "No items found.",
+    "itemizedBreakdown": "Itemized Breakdown",
     "headers": {
       "name": "Name",
       "qty": "Qty",
       "size": "Size",
       "who": "Who",
       "price": "Price"
+    },
+    "debts": {
+      "summary": "Debt Summary",
+      "calculating": "Calculating Debts...",
+      "calculatingGlobal": "Calculating Household Debts...",
+      "youOwe": "You Owe",
+      "payee": "Payee",
+      "debtor": "Debtor",
+      "grossDebt": "Gross Debt",
+      "currentTotal": "Current Total",
+      "applySplit": "Apply Split",
+      "invalidSplit": "Invalid Split"
     },
     "modal": {
       "title": "Scan Receipt",

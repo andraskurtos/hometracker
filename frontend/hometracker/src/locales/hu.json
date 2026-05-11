@@ -10,7 +10,8 @@
     "loading": "Betöltés...",
     "dangerZone": "Veszélyzóna",
     "you": "Ön",
-    "cancel": "Mégsem"
+    "cancel": "Mégsem",
+    "settle": "Rendezés"
   },
   "auth": {
     "signIn": "Bejelentkezés",
@@ -148,12 +149,25 @@
     "loading": "Blokkok betöltése...",
     "noReceipts": "Nem található blokk. Koppintson a + gombra egy szkenneléséhez!",
     "noItems": "Nem található tétel.",
+    "itemizedBreakdown": "Tételes bontás",
     "headers": {
       "name": "Név",
-      "qty": "Menny.",
+      "qty": "Db",
       "size": "Méret",
       "who": "Ki",
       "price": "Ár"
+    },
+    "debts": {
+      "summary": "Tartozások összesítése",
+      "calculating": "Tartozások számítása...",
+      "calculatingGlobal": "Háztartási tartozások számítása...",
+      "youOwe": "Tartozásai",
+      "payee": "Kedvezményezett",
+      "debtor": "Adós",
+      "grossDebt": "Bruttó tartozás",
+      "currentTotal": "Jelenlegi összesen",
+      "applySplit": "Szétosztás alkalmazása",
+      "invalidSplit": "Érvénytelen szétosztás"
     },
     "modal": {
       "title": "Blokk szkennelése",

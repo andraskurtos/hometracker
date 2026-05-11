@@ -134,7 +134,10 @@ function App() {
             <Route path="/" element={
               <ProtectedRoute isAuthenticated={isAuthenticated}>
                 {households.length > 0 ? (
-                  <Launchpad />
+                  <Launchpad 
+                    activeHouseholdId={activeHousehold?.id} 
+                    currency={activeHousehold?.base_currency}
+                  />
                 ) : (
                   <Navigate to="/setup-household" replace />
                 )}

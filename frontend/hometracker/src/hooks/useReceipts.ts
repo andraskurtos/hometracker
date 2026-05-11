@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { receiptService } from '../services/receiptService';
+import { receiptService, type UIOwner } from '../services/receiptService';
 import { queryKeys } from './queryKeys';
 
 export const useReceipts = (householdId: string | null) => {
@@ -17,5 +17,25 @@ export const useUploadReceipt = (householdId: string | null) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.receipts.list() });
     },
+  });
+};
+
+export const useUpdateItemOwners = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ receiptId, itemId, owners }: { receiptId: number; itemId: number; owners: UIOwner[] }) => 
+      receiptService.updateItemOwners(receiptId, itemId, owners),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.receipts.list() });
+      queryClient.invalidateQueries({ queryKey: ['receipts', 'debts', variables.receiptId] });
+    },
+  });
+};
+
+export const useReceiptDebts = (receiptId: number | null) => {
+  return useQuery({
+    queryKey: ['receipts', 'debts', receiptId],
+    queryFn: () => receiptService.fetchReceiptDebts(receiptId!),
+    enabled: !!receiptId,
   });
 };

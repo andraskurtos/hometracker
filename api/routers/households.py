@@ -159,7 +159,7 @@ def get_household_members(household_id: str, user_id: str = Depends(get_current_
             raise HTTPException(status_code=403, detail="You are not a member of this household")
         
         cur.execute("""
-                    SELECT u.id, u.first_name, u.last_name, u.display_name, u.profile_pic_url, hm.role, hm.joined_at
+                    SELECT u.id, u.first_name, u.last_name, u.display_name, u.profile_pic_url, u.revolut_username, hm.role, hm.joined_at
                     FROM users u
                     JOIN household_members hm ON u.id = hm.user_id
                     WHERE hm.household_id = %s AND hm.is_active = true
@@ -347,6 +347,45 @@ def deactivate_household(household_id: str, user_id: str = Depends(get_current_u
     finally:
         if cur: cur.close()
         if conn: conn.close()
+        
+@router.get("/{household_id}/debts/{target_user_id}")
+def get_user_debts(household_id: str, target_user_id: str, user_id: str = Depends(get_current_user_id)):
+    
+    conn = None
+    cur = None
+    
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cur.execute("SELECT 1 FROM household_members WHERE household_id = %s AND user_id = %s;", (household_id, user_id))
+        if not cur.fetchone():
+            raise HTTPException(status_code=403, detail="You are not a member of this household") 
+        
+        cur.execute("SELECT 1 FROM household_members WHERE household_id = %s AND user_id = %s;", (household_id, target_user_id))
+        if not cur.fetchone():
+            raise HTTPException(status_code=403, detail="Target user is not a member of this household") 
+        
+        cur.execute("""
+                        SELECT r.payee, SUM(io.amount)::FLOAT as amount
+                        FROM receipts r
+                        JOIN receipt_items ri ON ri.receipt_id = r.id
+                        JOIN item_owners io ON io.receipt_item_id = ri.id
+                        WHERE r.household_id = %s AND io.user_id = %s AND io.user_id != r.payee AND r.settled = FALSE
+                        GROUP BY r.payee;
+                    """, (household_id, target_user_id))
+        
+        debts = cur.fetchall()
+        
+        return {"status": "success", "data": debts}
+    except Exception as e:
+        logger.error(f"Error fetching user debts: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
+ 
         
         
 # --- DEBUG ENDPOINTS ---
