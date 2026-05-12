@@ -12,6 +12,7 @@ import HouseholdManagement from "./components/HouseholdManagement"
 import { useMyHouseholds } from './hooks/useHouseholds';
 import { useProfile, useLogout } from './hooks/useProfile';
 import { ReturnButton } from './components/ui/ReturnButton';
+import { Spinner } from './components/ui/Spinner';
 
 // --- Protected Route Wrapper ---
 const ProtectedRoute = ({ children, isAuthenticated }: { children: JSX.Element, isAuthenticated: boolean }) => {
@@ -94,7 +95,7 @@ function App() {
   if (isAuthenticated && isLoadingHouseholds) {
     return (
       <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+        <Spinner size="lg" />
       </div>
     );
   }

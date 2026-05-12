@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useRef, useMemo, type JSX } from 'react';
-import { ChevronDown, Plus, Upload, X, FileImage, Loader2, Percent, Hash, Check, CreditCard, User } from 'lucide-react';
+import { ChevronDown, Plus, Upload, X, FileImage, Percent, Hash, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { type UIReceipt, type UIOwner, type UIItem } from '../services/receiptService';
+import { type UIOwner, type UIItem, receiptService } from '../services/receiptService';
 import { calculateShares, distributeEvenly, convertSharesMode } from '../services/debtService';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Checkbox } from './ui/Checkbox';
 import { Badge } from './ui/Badge';
+import { Avatar } from './ui/Avatar';
+import { Spinner } from './ui/Spinner';
+import { StatCard } from './ui/StatCard';
+import { PageLayout } from './ui/PageLayout';
 import { useReceipts, useUploadReceipt, useUpdateItemOwners, useReceiptDebts } from '../hooks/useReceipts';
 import { useHouseholdMembers } from '../hooks/useHouseholds';
-import { getAssetUrl } from '../utils/assetUtils';
-import { useMediaQuery } from '../hooks/useMediaQuery';
 
 interface ReceiptSplitterProps {
   householdId: string | null;
@@ -21,80 +23,68 @@ type SplitMode = 'percent' | 'pcs';
 // --- SUB-COMPONENT: DEBT BREAKDOWN ---
 const DebtBreakdown = ({ receiptId, settled, members }: { receiptId: number, settled: boolean, members: any[] }) => {
   const { t } = useTranslation();
-  const isDesktop = useMediaQuery('(min-width: 1024px)');
   const { data: debts, isLoading } = useReceiptDebts(receiptId);
   const currentUserId = localStorage.getItem('userId');
 
   if (isLoading || !debts) return (
-    <div className="flex items-center gap-2 text-neutral-500 py-4 animate-pulse">
-      <Loader2 size={16} className="animate-spin" />
-      <span className="text-xs uppercase tracking-widest font-bold">{t('groceries.debts.calculating')}</span>
+    <div className="flex items-center gap-3 text-neutral-500 py-6">
+      <Spinner size="sm" />
+      <span className="text-[10px] uppercase tracking-[0.2em] font-black">{t('groceries.debts.calculating')}</span>
     </div>
   );
 
   const getMember = (id: string) => members.find(m => m.id === id);
 
   return (
-    <div className="flex flex-col gap-3 mb-8 animate-slide-down">
+    <div className="flex flex-col gap-4 mb-8 animate-slide-down">
       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500 ml-1">{t('groceries.debts.summary')}</h4>
       
       {/* Payee Card */}
-      <Card padding="p-4" className="flex items-center justify-between border-emerald-500/20 bg-emerald-500/5">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-emerald-500/30">
-            {getMember(debts.payee)?.profile_pic_url ? (
-              <img src={getAssetUrl(getMember(debts.payee).profile_pic_url)!} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-neutral-800 flex items-center justify-center text-xs font-black text-neutral-400">
-                {getMember(debts.payee)?.first_name[0]}{getMember(debts.payee)?.last_name[0]}
-              </div>
+      <StatCard 
+        variant="emerald"
+        label={t('groceries.debts.payee')}
+        value={debts.payee_share.toLocaleString()}
+        description={getMember(debts.payee)?.display_name || getMember(debts.payee)?.first_name}
+        icon={
+          <div className="flex items-center gap-2">
+            {debts.payee === currentUserId && (
+              <Badge variant="neutral" className="text-[9px] uppercase font-black px-1.5 py-0.5">{t('common.you')}</Badge>
             )}
+            <Avatar 
+              src={getMember(debts.payee)?.profile_pic_url} 
+              firstName={getMember(debts.payee)?.first_name}
+              lastName={getMember(debts.payee)?.last_name}
+              size="sm"
+              borderColor="border-emerald-500/30"
+            />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-black text-neutral-100">{getMember(debts.payee)?.display_name || getMember(debts.payee)?.first_name}</span>
-              {isDesktop && (
-                <>
-                    <Badge variant="emerald" className="text-[9px] uppercase font-black px-1.5 py-0.5">{t('groceries.debts.payee')}</Badge>
-                    {debts.payee === currentUserId && <Badge variant="neutral" className="text-[9px] uppercase font-black px-1.5 py-0.5">{t('common.you')}</Badge>}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-        <span className="text-lg font-black text-emerald-400">
-          {debts.payee_share.toLocaleString()}
-        </span>
-      </Card>
+        }
+      />
 
       {/* Debtors List */}
-      <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {debts.debtors.map((d, idx) => (
-          <Card key={idx} padding="p-4" className="flex items-center justify-between bg-neutral-950/40">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full overflow-hidden border border-neutral-800">
-                {getMember(d.debtor)?.profile_pic_url ? (
-                  <img src={getAssetUrl(getMember(d.debtor).profile_pic_url)!} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-neutral-800 flex items-center justify-center text-xs font-black text-neutral-400">
-                    {getMember(d.debtor)?.first_name[0]}{getMember(d.debtor)?.last_name[0]}
-                  </div>
-                )}
-              </div>
+          <StatCard 
+            key={idx}
+            variant="neutral"
+            label={t('groceries.debts.debtor')}
+            value={d.debtor_share.toLocaleString()}
+            description={getMember(d.debtor)?.display_name || getMember(d.debtor)?.first_name}
+            className={settled ? 'border-emerald-500/20' : 'border-red-500/10'}
+            icon={
               <div className="flex items-center gap-2">
-                <span className="text-sm font-black text-neutral-100">{getMember(d.debtor)?.display_name || getMember(d.debtor)?.first_name}</span>
-                {isDesktop && (
-                    <>
-                        <Badge variant="neutral" className="text-[8px] uppercase font-black px-1.5 py-0.5 opacity-50">{t('groceries.debts.debtor')}</Badge>
-                        {d.debtor === currentUserId && <Badge variant="neutral" className="text-[8px] uppercase font-black px-1.5 py-0.5">{t('common.you')}</Badge>}
-                    </>
+                {d.debtor === currentUserId && (
+                  <Badge variant="neutral" className="text-[9px] uppercase font-black px-1.5 py-0.5 opacity-50">{t('common.you')}</Badge>
                 )}
+                <Avatar 
+                  src={getMember(d.debtor)?.profile_pic_url} 
+                  firstName={getMember(d.debtor)?.first_name}
+                  lastName={getMember(d.debtor)?.last_name}
+                  size="sm"
+                />
               </div>
-            </div>
-            <span className={`text-lg font-black ${settled ? 'text-emerald-500' : 'text-red-500'}`}>
-              {d.debtor_share.toLocaleString()}
-            </span>
-          </Card>
+            }
+          />
         ))}
       </div>
     </div>
@@ -106,56 +96,47 @@ const SplitMenu = React.memo(({
   receiptId, 
   item, 
   householdId, 
-  onClose,
+  onClose, 
   onSuccess 
 }: { 
   receiptId: number, 
   item: UIItem, 
   householdId: string, 
-  onClose: () => void,
-  onSuccess: () => void
+  onClose: () => void, 
+  onSuccess: () => void 
 }) => {
   const { t } = useTranslation();
-  const isDesktop = useMediaQuery('(min-width: 1024px)');
-  const { data: members = [] } = useHouseholdMembers(householdId);
-  const updateOwnersMutation = useUpdateItemOwners();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
+  const [isClosing, setIsClosing] = useState(false);
   const [splitMode, setSplitMode] = useState<SplitMode>('percent');
   const [tempShares, setTempShares] = useState<Record<string, number>>({});
-  const [isClosing, setIsClosing] = useState(false);
+  const { data: members = [] } = useHouseholdMembers(householdId);
+  const updateOwnersMutation = useUpdateItemOwners();
 
-  // Initialize shares from existing owners
+  // Initial sync from item.owners
   useEffect(() => {
-    const initialShares: Record<string, number> = {};
-    const totalAmount = item.qty * item.price;
-    
+    const initial: Record<string, number> = {};
     item.owners.forEach(o => {
-      if (splitMode === 'percent') {
-        initialShares[o.userId] = Math.round((o.amount / totalAmount) * 100 * 100) / 100;
-      } else {
-        initialShares[o.userId] = Math.round((o.amount / item.price) * 100) / 100;
-      }
+      initial[o.user_id] = splitMode === 'percent' ? o.weight : (o.weight / 100) * item.qty;
     });
-    setTempShares(initialShares);
-  }, [item.id, splitMode]);
+    setTempShares(initial);
+  }, [item.id, splitMode, item.qty]);
 
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(() => {
-      onClose();
-    }, 200);
-  };
-
+  // Handle click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         handleClose();
       }
     };
-    if (!isClosing) document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isClosing]);
+  }, []);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(onClose, 200);
+  };
 
   const handleModeSwitch = (newMode: SplitMode) => {
     if (newMode === splitMode) return;
@@ -212,9 +193,14 @@ const SplitMenu = React.memo(({
           return (
             <Card key={member.id} padding="p-4" hoverable className={`flex items-center gap-4 border-2 transition-all duration-300 ${isSelected ? 'border-emerald-500/40 bg-emerald-500/10 shadow-[0_0_20px_rgba(16,185,129,0.1)]' : 'bg-neutral-950/60 border-neutral-800/50'}`} onClick={() => toggleUserInSplit(member.id)}>
               <Checkbox checked={isSelected} onChange={() => toggleUserInSplit(member.id)} />
-              <div className="w-11 h-11 rounded-full overflow-hidden bg-neutral-800 border-2 border-neutral-700 shadow-inner shrink-0">
-                {member.profile_pic_url ? <img src={getAssetUrl(member.profile_pic_url)!} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs font-black text-neutral-500">{member.first_name[0]}{member.last_name[0]}</div>}
-              </div>
+              <Avatar 
+                src={member.profile_pic_url}
+                firstName={member.first_name}
+                lastName={member.last_name}
+                size="md"
+                borderColor="border-neutral-700"
+                className="shadow-inner"
+              />
               <span className="flex-1 text-sm font-black text-neutral-100 tracking-tight truncate">{member.display_name || `${member.first_name} ${member.last_name}`}</span>
               <div className="relative group/input" onClick={(e) => e.stopPropagation()}>
                 <input type="number" value={tempShares[member.id] || 0} onChange={(e) => setTempShares(prev => ({ ...prev, [member.id]: parseFloat(e.target.value) || 0 }))} className="w-24 bg-neutral-950 border-2 border-neutral-800 rounded-2xl px-3 py-2.5 text-lg font-black font-mono text-emerald-400 text-right focus:outline-none focus:border-emerald-500 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-inner" placeholder="0" step="0.01" />
@@ -257,59 +243,55 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
 
   useEffect(() => {
     if (serverReceipts.length > 0 && expandedIds.size === 0) {
-      setExpandedIds(new Set([serverReceipts[0].id]));
+      // Auto-expand first receipt if needed or just leave as is
     }
-  }, [serverReceipts.length]);
+  }, [serverReceipts]);
 
-  const toggleAccordion = (id: number): void => {
+  const toggleAccordion = (id: number) => {
     if (expandedIds.has(id)) {
-      setClosingReceiptIds(prev => new Set(prev).add(id));
+      setClosingReceiptIds(new Set([id]));
       setTimeout(() => {
         setExpandedIds(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(id);
-          return newSet;
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
         });
-        setClosingReceiptIds(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(id);
-          return newSet;
-        });
-      }, 300);
+        setClosingReceiptIds(new Set());
+      }, 500);
     } else {
-      setExpandedIds(prev => new Set(prev).add(id));
+      setExpandedIds(prev => new Set([...prev, id]));
     }
   };
 
   const handleUpload = async () => {
-    if (!selectedFile || !householdId) return;
+    if (!selectedFile) return;
     try {
       await uploadMutation.mutateAsync(selectedFile);
-      setIsModalOpen(false);
       setSelectedFile(null);
-    } catch (error) {
-      alert(t('groceries.errors.uploadFailed'));
+      setIsModalOpen(false);
+    } catch (err) {
+      alert(t('groceries.upload.error'));
     }
   };
 
   if (isLoadingReceipts && serverReceipts.length === 0) {
     return (
-      <div className="w-full h-64 flex flex-col items-center justify-center text-emerald-500">
-        <Loader2 className="w-10 h-10 animate-spin mb-4" />
-        <p className="text-neutral-400 font-medium">{t('groceries.loading')}</p>
+      <div className="w-full h-64 flex flex-col items-center justify-center">
+        <Spinner size="lg" />
+        <p className="mt-4 text-neutral-500 font-black uppercase tracking-widest text-[10px] animate-pulse">{t('groceries.loading')}</p>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full flex flex-col relative">
+    <PageLayout maxWidth="4xl" className="relative pb-24">
       <div className="fixed bottom-10 right-10 z-40">
         <Button variant="primary" className="w-16 h-16 rounded-full shadow-2xl !p-0 flex items-center justify-center" onClick={() => setIsModalOpen(true)} icon={<Plus size={24} />}>
           {''}
         </Button>
       </div>
 
-      <div className="flex flex-col gap-6 w-full max-w-4xl mx-auto p-4 mb-24">
+      <div className="flex flex-col gap-6 w-full">
         {serverReceipts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-neutral-500 bg-neutral-900/20 rounded-3xl border border-dashed border-neutral-800">
             <Upload size={48} className="mb-4 opacity-20" />
@@ -362,16 +344,20 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
                                   const currentUserId = localStorage.getItem('userId');
                                   if (receipt.payee == currentUserId) {
                                     setActiveSplitId({ receiptId: receipt.id, itemId: item.id });
-                                  } else {
-                                    console.log('Split denied: ', { payee: receipt.payee, you: currentUserId });
                                   }
                                 }} 
                                 className={`flex items-center justify-center -space-x-3 group/stack ${receipt.payee == localStorage.getItem('userId') ? 'cursor-pointer' : 'cursor-default'}`}
                               >
-                                {members.filter(m => item.owners.some(o => o.userId === m.id)).slice(0, 3).map((member, idx) => (
-                                  <div key={member.id} className="relative w-8 h-8 rounded-full border-2 border-neutral-900 overflow-hidden bg-neutral-800 transition-transform group-hover/stack:translate-x-1" style={{ zIndex: 10 - idx }}>
-                                    {member.profile_pic_url ? <img src={getAssetUrl(member.profile_pic_url)!} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-neutral-400">{member.first_name[0]}{member.last_name[0]}</div>}
-                                  </div>
+                                {members.filter(m => item.owners.some(o => o.user_id === m.id)).slice(0, 3).map((member, idx) => (
+                                  <Avatar 
+                                    key={member.id}
+                                    src={member.profile_pic_url}
+                                    firstName={member.first_name}
+                                    lastName={member.last_name}
+                                    size="sm"
+                                    className="ring-2 ring-neutral-900 group-hover/stack:translate-x-1 transition-transform"
+                                    style={{ zIndex: 10 - idx }}
+                                  />
                                 ))}
                                 {item.owners.length > 3 && <div className="w-8 h-8 rounded-full border-2 border-neutral-900 bg-neutral-800 flex items-center justify-center text-[10px] font-bold text-neutral-400 relative z-0 transition-transform group-hover/stack:translate-x-1">+{item.owners.length - 3}</div>}
                                 {item.owners.length === 0 && <div className="w-8 h-8 rounded-full border-2 border-dashed border-neutral-800 flex items-center justify-center text-neutral-600"><Plus size={14} /></div>}
@@ -400,30 +386,47 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
         )}
       </div>
 
+      {/* Upload Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-neutral-950/80 backdrop-blur-sm animate-in fade-in duration-300">
-          <Card className="w-full max-w-lg relative animate-in zoom-in-95 duration-300">
-            <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 p-2 text-neutral-500 hover:text-neutral-200 transition-colors"><X size={20} /></button>
-            <h2 className="text-2xl font-bold text-neutral-100 mb-6">{t('groceries.modal.title')}</h2>
-            <div onClick={() => fileInputRef.current?.click()} className={`w-full aspect-video rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center cursor-pointer mb-8 ${selectedFile ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-neutral-800 hover:border-neutral-700 bg-neutral-900/40'}`}>
-              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { if (e.target.files && e.target.files.length > 0) setSelectedFile(e.target.files[0]); }} />
-              {selectedFile ? (
-                <div className="flex flex-col items-center text-emerald-400">
-                  <FileImage size={40} className="mb-2" /><p className="font-medium text-sm text-center px-4 line-clamp-1">{selectedFile.name}</p>
-                </div>
-              ) : (
-                <>
-                  <Upload size={40} className="text-neutral-700 mb-3" /><p className="text-neutral-500 text-sm">{t('groceries.modal.uploadText')}</p>
-                </>
-              )}
-            </div>
-            <div className="flex gap-4">
-              <Button variant="neutral" className="flex-1" onClick={() => setIsModalOpen(false)}>{t('common.cancel')}</Button>
-              <Button variant="primary" className="flex-1" onClick={handleUpload} isLoading={uploadMutation.isPending} disabled={!selectedFile}>{uploadMutation.isPending ? t('groceries.modal.analyzing') : t('groceries.modal.submit')}</Button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-neutral-950/80 backdrop-blur-sm" onClick={() => !uploadMutation.isPending && setIsModalOpen(false)} />
+          <Card className="w-full max-w-md relative animate-in zoom-in-95 duration-200" padding="p-8">
+            <button onClick={() => !uploadMutation.isPending && setIsModalOpen(false)} className="absolute top-4 right-4 p-2 text-neutral-500 hover:text-neutral-200 transition-colors"><X size={20} /></button>
+            <div className="flex flex-col items-center text-center gap-6">
+              <div className="w-20 h-20 rounded-3xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                <Upload size={40} />
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-neutral-100 mb-2">{t('groceries.upload.title')}</h3>
+                <p className="text-neutral-500">{t('groceries.upload.subtitle')}</p>
+              </div>
+              
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className={`w-full py-12 border-2 border-dashed rounded-3xl transition-all cursor-pointer flex flex-col items-center gap-3 ${selectedFile ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-neutral-800 hover:border-neutral-700 bg-neutral-950/50'}`}
+              >
+                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { if (e.target.files && e.target.files.length > 0) setSelectedFile(e.target.files[0]); }} />
+                {selectedFile ? (
+                  <>
+                    <div className="p-3 rounded-2xl bg-emerald-500 text-neutral-950"><Check size={24} /></div>
+                    <span className="font-bold text-neutral-200 line-clamp-1 px-4">{selectedFile.name}</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="p-3 rounded-2xl bg-neutral-800 text-neutral-400"><Plus size={24} /></div>
+                    <span className="font-bold text-neutral-500">{t('groceries.upload.selectFile')}</span>
+                  </>
+                )}
+              </div>
+
+              <div className="flex gap-3 w-full">
+                <Button variant="neutral" className="flex-1" onClick={() => setIsModalOpen(false)} disabled={uploadMutation.isPending}>{t('common.cancel')}</Button>
+                <Button variant="primary" className="flex-1" onClick={handleUpload} disabled={!selectedFile || uploadMutation.isPending} isLoading={uploadMutation.isPending}>{uploadMutation.isPending ? t('groceries.modal.analyzing') : t('common.upload')}</Button>
+              </div>
             </div>
           </Card>
         </div>
       )}
-    </div>
+    </PageLayout>
   );
 }

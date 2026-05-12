@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { User, ShieldCheck, CreditCard, Camera, CheckCircle2, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { getAssetUrl } from '../utils/assetUtils';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { ReturnButton } from './ui/ReturnButton';
 import { Input } from './ui/Input';
 import { Badge } from './ui/Badge';
 import { GlassSection } from './ui/GlassSection';
+import { Avatar } from './ui/Avatar';
+import { Spinner } from './ui/Spinner';
+import { PageLayout } from './ui/PageLayout';
 import { useProfile, useUpdateProfile, useUploadAvatar } from '../hooks/useProfile';
 
 interface ProfileProps {
@@ -68,8 +70,6 @@ export default function Profile({ onBack }: ProfileProps) {
     }
   };
 
-  const fullAvatarUrl = getAssetUrl(formData.profilePicUrl);
-
   // --- 2. SAVE CHANGES ---
   const handleSave = async () => {
     setSaveSuccess(false);
@@ -102,16 +102,17 @@ export default function Profile({ onBack }: ProfileProps) {
 
   if (isLoading) {
     return (
-      <div className="w-full h-64 flex flex-col items-center justify-center">
-        <Button variant="ghost" isLoading className="text-emerald-500">
+      <div className="w-full min-h-[50vh] flex flex-col items-center justify-center">
+        <Spinner size="lg" />
+        <p className="mt-4 text-neutral-500 text-sm font-medium animate-pulse">
           {t('profile.fetchingDetails')}
-        </Button>
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <PageLayout maxWidth="3xl">
       <input 
         type="file" 
         ref={fileInputRef} 
@@ -120,7 +121,7 @@ export default function Profile({ onBack }: ProfileProps) {
         onChange={handleFileChange} 
       />
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-8">
         <ReturnButton 
           onClick={onBack}
           label={t('common.backToDashboard')}
@@ -134,21 +135,18 @@ export default function Profile({ onBack }: ProfileProps) {
       </div>
 
       {/* Profile Pic Area */}
-      <Card className="flex flex-col md:flex-row items-center gap-8">
+      <Card className="flex flex-col md:flex-row items-center gap-8 mb-8">
         <div className="relative group">
-          <div className="w-32 h-32 rounded-full bg-neutral-800 border-2 border-neutral-700 overflow-hidden flex items-center justify-center shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-            {fullAvatarUrl? (
-              <img
-                src={fullAvatarUrl}
-                alt={t('profile.profileAlt')}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <User size={64} className="text-neutral-600" />
-            )}
-          </div>
+          <Avatar 
+            src={formData.profilePicUrl}
+            firstName={formData.firstName}
+            lastName={formData.lastName}
+            size="xl"
+            borderColor="border-neutral-700"
+            className="shadow-[0_0_30px_rgba(0,0,0,0.5)]"
+          />
           <button 
-            className="absolute bottom-0 right-0 p-2.5 bg-emerald-500 text-neutral-950 rounded-full hover:scale-110 transition-transform shadow-lg disabled:opacity-50" 
+            className="absolute bottom-0 right-0 p-2.5 bg-emerald-500 text-neutral-950 rounded-full hover:scale-110 transition-transform shadow-lg disabled:opacity-50 z-10" 
             onClick={handleAvatarClick}
             disabled={uploadAvatarMutation.isPending}
           >
@@ -236,6 +234,6 @@ export default function Profile({ onBack }: ProfileProps) {
           {t('common.saveChanges')}
         </Button>
       </div>
-    </div>
+    </PageLayout>
   );
 }
