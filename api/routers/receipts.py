@@ -151,7 +151,6 @@ def get_household_receipts(household_id: str, user_id: str = Depends(get_current
                 r.payment_method, 
                 r.created_at,
                 r.payee,
-                r.settled,
                 s.name as store_name
             FROM receipts r
             JOIN stores s ON r.store_id = s.id
@@ -175,7 +174,8 @@ def get_household_receipts(household_id: str, user_id: str = Depends(get_current
                     json_agg(
                         json_build_object(
                             'id', io.user_id,
-                            'amount', io.amount
+                            'amount', io.amount,
+                            'settled', io.settled
                         )
                     ) FILTER (WHERE io.id IS NOT NULL),
                     '[]'
@@ -212,7 +212,6 @@ def get_household_receipts(household_id: str, user_id: str = Depends(get_current
                 "payment_method": receipt["payment_method"],
                 "created_at": receipt["created_at"].isoformat(),
                 "payee": receipt["payee"],
-                "settled": receipt["settled"],
                 "items": items_by_receipt.get(r_id, [])
             })
 
@@ -330,7 +329,7 @@ def get_receipt_debts(
                 SUM(io.amount) as total_share
             FROM receipt_items ri
             JOIN item_owners io ON ri.id = io.receipt_item_id
-            WHERE ri.receipt_id = %s
+            WHERE ri.receipt_id = %s AND io.settled = FALSE
             GROUP BY io.user_id;
         """, (receipt_id,))
         

@@ -16,7 +16,8 @@ const getHeaders = () => {
 // --- TYPES DECLARED IN BACKEND ---
 export interface BackendOwner {
   id: string;
-  amount: number; // Switched from percentage
+  amount: number; 
+  settled: boolean;
 }
 
 export interface BackendItem {
@@ -37,7 +38,6 @@ export interface BackendReceipt {
   payment_method: string;
   created_at: string;
   payee: string;
-  settled: boolean;
   items: BackendItem[];
 }
 
@@ -56,6 +56,7 @@ export interface BackendDebts {
 export interface UIOwner {
   userId: string;
   amount: number; 
+  settled: boolean;
 }
 
 export interface UIItem {
@@ -73,7 +74,7 @@ export interface UIReceipt {
   date: string;
   totalAmount: number;
   payee: string;
-  settled: boolean;
+  settled: boolean; // Derived from items
   items: UIItem[];
 }
 
@@ -113,14 +114,8 @@ export const receiptService = {
     const json = await response.json();
     const rawReceipts: BackendReceipt[] = json.data;
 
-    return rawReceipts.map(receipt => ({
-      id: receipt.id,
-      storeName: receipt.store.name,
-      date: formatDate(receipt.created_at),
-      totalAmount: Number(receipt.total_amount),
-      payee: receipt.payee,
-      settled: receipt.settled,
-      items: receipt.items.map(item => ({
+    return rawReceipts.map(receipt => {
+      const items = receipt.items.map(item => ({
         id: item.id,
         name: item.name,
         qty: item.quantity,
@@ -128,10 +123,27 @@ export const receiptService = {
         price: Number(item.price_paid),
         owners: item.owners.map(o => ({
           userId: o.id,
-          amount: Number(o.amount)
+          amount: Number(o.amount),
+          settled: o.settled
         })),
-      }))
-    }));
+      }));
+
+      // A receipt is settled if all non-payee owners are settled across ALL items
+      // Check every owner of every item: if user != payee, they must be settled.
+      const allOwnersSettled = items.every(item => 
+        item.owners.every(o => o.userId === receipt.payee || o.settled)
+      );
+
+      return {
+        id: receipt.id,
+        storeName: receipt.store.name,
+        date: formatDate(receipt.created_at),
+        totalAmount: Number(receipt.total_amount),
+        payee: receipt.payee,
+        settled: allOwnersSettled,
+        items
+      };
+    });
   },
 
   fetchReceiptDebts: async (receiptId: number): Promise<BackendDebts> => {

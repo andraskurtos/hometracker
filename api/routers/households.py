@@ -371,7 +371,7 @@ def get_user_debts(household_id: str, target_user_id: str, user_id: str = Depend
                         FROM receipts r
                         JOIN receipt_items ri ON ri.receipt_id = r.id
                         JOIN item_owners io ON io.receipt_item_id = ri.id
-                        WHERE r.household_id = %s AND io.user_id = %s AND io.user_id != r.payee AND r.settled = FALSE
+                        WHERE r.household_id = %s AND io.user_id = %s AND io.user_id != r.payee AND io.settled = FALSE
                         GROUP BY r.payee;
                     """, (household_id, target_user_id))
         
