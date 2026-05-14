@@ -11,7 +11,8 @@
     "dangerZone": "Danger Zone",
     "you": "You",
     "cancel": "Cancel",
-    "settle": "Settle"
+    "settle": "Settle",
+    "upload": "Upload"
   },
   "auth": {
     "signIn": "Sign In",
@@ -151,6 +152,11 @@
     "noReceipts": "No receipts found. Tap the + to scan one!",
     "noItems": "No items found.",
     "itemizedBreakdown": "Itemized Breakdown",
+    "upload": {
+      "title": "Receipt Parsing",
+      "subtitle": "Upload an image of a receipt to parse it with AI",
+      "selectFile": "Choose your image"
+    },
     "headers": {
       "name": "Name",
       "qty": "Qty",

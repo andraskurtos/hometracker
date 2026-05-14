@@ -10,6 +10,7 @@ const KEYS = {
   TOKEN: 'token',
   USER_ID: 'userId',
   USER_NAME: 'userName',
+  HOUSEHOLD_ORDER: 'householdOrder',
 };
 
 export const storageService = {
@@ -46,6 +47,15 @@ export const storageService = {
 
   isAuthenticated: (): boolean => {
     return !!localStorage.getItem(KEYS.TOKEN);
+  },
+
+  // --- Household Ordering ---
+  getHouseholdOrder: (): string[] => {
+    const order = localStorage.getItem(KEYS.HOUSEHOLD_ORDER);
+    return order ? JSON.parse(order) : [];
+  },
+  setHouseholdOrder: (order: string[]): void => {
+    localStorage.setItem(KEYS.HOUSEHOLD_ORDER, JSON.stringify(order));
   }
 };
 

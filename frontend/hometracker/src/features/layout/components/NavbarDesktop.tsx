@@ -1,11 +1,102 @@
-import { User, LogOut, Languages, ChevronDown, Home, Settings, Check, Plus } from 'lucide-react';
+import { User, LogOut, Languages, ChevronDown, Home, Settings, Check, Plus, GripVertical } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { NavbarProps } from './Navbar';
 import { useNavbarLogic } from '@/features/layout/hooks/useNavbarLogic';
+import { 
+  DndContext, 
+  closestCenter, 
+  KeyboardSensor, 
+  PointerSensor, 
+  TouchSensor,
+  useSensor, 
+  useSensors, 
+  type DragEndEvent 
+} from '@dnd-kit/core';
+import { 
+  arrayMove, 
+  SortableContext, 
+  sortableKeyboardCoordinates, 
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface DesktopProps extends NavbarProps {
   logic: ReturnType<typeof useNavbarLogic>;
 }
+
+const SortableHouseholdItem = ({ 
+  h, 
+  activeHouseholdId, 
+  onSelect, 
+  onManage, 
+  t 
+}: { 
+  h: any, 
+  activeHouseholdId?: string, 
+  onSelect: (id: string) => void, 
+  onManage: () => void, 
+  t: any 
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: h.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 100 : 'auto',
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`group/item w-full flex items-center justify-between px-4 py-3 rounded-xl mb-1 transition-all cursor-pointer ${
+        h.id === activeHouseholdId 
+          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+          : 'text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100'
+      }`}
+      onClick={() => onSelect(h.id)}
+    >
+      <div className="flex items-center gap-2 overflow-hidden flex-1">
+        <div 
+          {...attributes} 
+          {...listeners} 
+          className="cursor-grab active:cursor-grabbing p-1 -ml-2 text-neutral-600 hover:text-neutral-400"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical size={14} />
+        </div>
+        <div className="flex flex-col items-start overflow-hidden text-left">
+          <span className="font-bold text-sm truncate w-full">{h.name}</span>
+          <span className="text-[10px] uppercase tracking-widest opacity-60">{h.role}</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 flex-none">
+        {h.id === activeHouseholdId && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onManage();
+            }}
+            className="p-1.5 rounded-lg hover:bg-emerald-500/20 text-emerald-400 transition-colors"
+            title={t('common.profileSettings')}
+          >
+            <Settings size={14} />
+          </button>
+        )}
+        {h.id === activeHouseholdId && <Check size={14} strokeWidth={3} className="text-emerald-400" />}
+      </div>
+    </div>
+  );
+};
 
 export const NavbarDesktop = ({ logic, ...props }: DesktopProps) => {
   const { 
@@ -21,6 +112,33 @@ export const NavbarDesktop = ({ logic, ...props }: DesktopProps) => {
     currentLanguage 
   } = logic;
   const navigate = useNavigate();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = props.households.findIndex(h => h.id === active.id);
+      const newIndex = props.households.findIndex(h => h.id === over.id);
+      const newHouseholds = arrayMove(props.households, oldIndex, newIndex);
+      props.onReorderHouseholds?.(newHouseholds.map(h => h.id));
+    }
+  };
 
   return (
     <nav className="sticky top-0 z-50 w-full bg-neutral-950/80 backdrop-blur-md border-b border-neutral-900/50 hidden lg:block">
@@ -57,41 +175,33 @@ export const NavbarDesktop = ({ logic, ...props }: DesktopProps) => {
               {isHouseholdOpen && (
                 <div className="absolute top-full left-0 right-0 mt-2 p-2 bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200 z-50">
                   <div className="max-h-60 overflow-y-auto scrollbar-hide">
-                    {props.households.map((h) => (
-                      <div
-                        key={h.id}
-                        onClick={() => {
-                          props.onSelectHousehold?.(h.id);
-                          setIsHouseholdOpen(false);
-                        }}
-                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl mb-1 transition-all cursor-pointer ${
-                          h.id === props.activeHousehold?.id 
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                            : 'text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100'
-                        }`}
+                    <DndContext 
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <SortableContext 
+                        items={props.households.map(h => h.id)}
+                        strategy={verticalListSortingStrategy}
                       >
-                        <div className="flex flex-col items-start overflow-hidden text-left">
-                          <span className="font-bold text-sm truncate w-full">{h.name}</span>
-                          <span className="text-[10px] uppercase tracking-widest opacity-60">{h.role}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {h.id === props.activeHousehold?.id && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                props.onManageHousehold?.();
-                                setIsHouseholdOpen(false);
-                              }}
-                              className="p-1.5 rounded-lg hover:bg-emerald-500/20 text-emerald-400 transition-colors"
-                              title={t('common.profileSettings')}
-                            >
-                              <Settings size={14} />
-                            </button>
-                          )}
-                          {h.id === props.activeHousehold?.id && <Check size={14} strokeWidth={3} className="text-emerald-400" />}
-                        </div>
-                      </div>
-                    ))}
+                        {props.households.map((h) => (
+                          <SortableHouseholdItem 
+                            key={h.id}
+                            h={h}
+                            activeHouseholdId={props.activeHousehold?.id}
+                            onSelect={(id) => {
+                              props.onSelectHousehold?.(id);
+                              setIsHouseholdOpen(false);
+                            }}
+                            onManage={() => {
+                              props.onManageHousehold?.();
+                              setIsHouseholdOpen(false);
+                            }}
+                            t={t}
+                          />
+                        ))}
+                      </SortableContext>
+                    </DndContext>
                   </div>
                   
                   <div className="border-t border-neutral-800 mt-1 pt-1 space-y-1">

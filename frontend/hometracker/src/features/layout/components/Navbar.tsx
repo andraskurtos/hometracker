@@ -12,6 +12,7 @@ export interface NavbarProps {
   activeHousehold: Household | null;
   onSelectHousehold?: (id: string) => void;
   onManageHousehold?: () => void;
+  onReorderHouseholds?: (newOrder: string[]) => void;
 }
 
 export default function Navbar(props: NavbarProps) {

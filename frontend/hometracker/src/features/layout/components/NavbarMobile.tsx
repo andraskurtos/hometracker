@@ -1,15 +1,127 @@
-import { Menu, X, User, LogOut, Settings, Plus } from 'lucide-react';
+import { Menu, X, User, LogOut, Settings, Plus, GripVertical } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { NavbarProps } from './Navbar';
 import { useNavbarLogic } from '@/features/layout/hooks/useNavbarLogic';
+import { 
+  DndContext, 
+  closestCenter, 
+  KeyboardSensor, 
+  PointerSensor, 
+  TouchSensor,
+  useSensor, 
+  useSensors, 
+  type DragEndEvent 
+} from '@dnd-kit/core';
+import { 
+  arrayMove, 
+  SortableContext, 
+  sortableKeyboardCoordinates, 
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface MobileProps extends NavbarProps {
   logic: ReturnType<typeof useNavbarLogic>;
 }
 
+const SortableHouseholdItem = ({ 
+  h, 
+  activeHouseholdId, 
+  onSelect, 
+  onManage 
+}: { 
+  h: any, 
+  activeHouseholdId?: string, 
+  onSelect: (id: string) => void, 
+  onManage: () => void 
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: h.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 100 : 'auto',
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
+        h.id === activeHouseholdId 
+        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
+        : 'bg-neutral-900/50 border-neutral-800 text-neutral-400'
+      }`}
+      onClick={() => onSelect(h.id)}
+    >
+      <div className="flex items-center gap-3 overflow-hidden flex-1">
+        <div 
+          {...attributes} 
+          {...listeners} 
+          className="cursor-grab active:cursor-grabbing p-1 -ml-2 text-neutral-600"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical size={18} />
+        </div>
+        <span className="font-bold truncate">{h.name}</span>
+      </div>
+      <div className="flex items-center gap-3 flex-none">
+        {h.id === activeHouseholdId && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onManage();
+            }}
+            className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400"
+          >
+            <Settings size={16} />
+          </button>
+        )}
+        {h.id === activeHouseholdId && <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]" />}
+      </div>
+    </div>
+  );
+};
+
 export const NavbarMobile = ({ logic, ...props }: MobileProps) => {
   const { t, i18n, isMenuOpen, setIsMenuOpen, languages } = logic;
   const navigate = useNavigate();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = props.households.findIndex(h => h.id === active.id);
+      const newIndex = props.households.findIndex(h => h.id === over.id);
+      const newHouseholds = arrayMove(props.households, oldIndex, newIndex);
+      props.onReorderHouseholds?.(newHouseholds.map(h => h.id));
+    }
+  };
 
   return (
     <nav className="sticky top-0 z-50 w-full bg-neutral-950/90 backdrop-blur-lg border-b border-neutral-900/50">
@@ -37,34 +149,26 @@ export const NavbarMobile = ({ logic, ...props }: MobileProps) => {
                 {t('launchpad.household.name')}
               </label>
               <div className="space-y-2">
-                {props.households.map(h => (
-                  <div
-                    key={h.id}
-                    onClick={() => { props.onSelectHousehold?.(h.id); setIsMenuOpen(false); }}
-                    className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
-                      h.id === props.activeHousehold?.id 
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
-                      : 'bg-neutral-900/50 border-neutral-800 text-neutral-400'
-                    }`}
+                <DndContext 
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext 
+                    items={props.households.map(h => h.id)}
+                    strategy={verticalListSortingStrategy}
                   >
-                    <span className="font-bold">{h.name}</span>
-                    <div className="flex items-center gap-3">
-                      {h.id === props.activeHousehold?.id && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            props.onManageHousehold?.();
-                            setIsMenuOpen(false);
-                          }}
-                          className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400"
-                        >
-                          <Settings size={16} />
-                        </button>
-                      )}
-                      {h.id === props.activeHousehold?.id && <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]" />}
-                    </div>
-                  </div>
-                ))}
+                    {props.households.map(h => (
+                      <SortableHouseholdItem 
+                        key={h.id}
+                        h={h}
+                        activeHouseholdId={props.activeHousehold?.id}
+                        onSelect={(id) => { props.onSelectHousehold?.(id); setIsMenuOpen(false); }}
+                        onManage={() => { props.onManageHousehold?.(); setIsMenuOpen(false); }}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
                 
                 <button
                   onClick={() => { navigate('/setup-household'); setIsMenuOpen(false); }}

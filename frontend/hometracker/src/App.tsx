@@ -20,6 +20,7 @@ import HouseholdManagement from "./features/households/components/HouseholdManag
 import { useAuth } from './features/auth/AuthContext';
 import { useMyHouseholds } from './features/households/hooks/useHouseholds';
 import { useState } from 'react';
+import { storageService } from '@/services/storageService';
 
 // --- Protected Route Wrapper ---
 const ProtectedRoute = ({ children, isAuthenticated }: { children: JSX.Element, isAuthenticated: boolean }) => {
@@ -33,6 +34,7 @@ function App() {
   const { t } = useTranslation();
   const { isAuthenticated, login, logout, userName, isLoading: isAuthLoading } = useAuth();
   const [activeHouseholdId, setActiveHouseholdId] = useState<string | null>(null);
+  const [householdOrder, setHouseholdOrder] = useState<string[]>(() => storageService.getHouseholdOrder());
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -44,11 +46,54 @@ function App() {
     refetch: refetchHouseholds 
   } = useMyHouseholds(isAuthenticated);
 
-  // Active household object
+  // Sorted households based on stored order
+  const sortedHouseholds = useMemo(() => {
+    if (households.length === 0) return [];
+    
+    // Use the reactive householdOrder state
+    if (householdOrder.length === 0) return households;
+
+    const householdMap = new Map(households.map(h => [h.id, h]));
+    const sorted = householdOrder
+      .map(id => householdMap.get(id))
+      .filter((h): h is typeof households[0] => !!h);
+
+    // Add any households that aren't in the stored order yet
+    const remaining = households.filter(h => !householdOrder.includes(h.id));
+    return [...sorted, ...remaining];
+  }, [households, householdOrder]);
+
+  // Update householdOrder if households change (e.g. after joining a new one)
+  useEffect(() => {
+    if (households.length > 0) {
+      const currentIds = households.map(h => h.id);
+      const hasNew = currentIds.some(id => !householdOrder.includes(id));
+      const hasRemoved = householdOrder.some(id => !currentIds.includes(id));
+      
+      if (hasNew || hasRemoved) {
+        // Keep existing order for known IDs, add new ones at the end, remove gone ones
+        const newOrder = [
+          ...householdOrder.filter(id => currentIds.includes(id)),
+          ...currentIds.filter(id => !householdOrder.includes(id))
+        ];
+        setHouseholdOrder(newOrder);
+        storageService.setHouseholdOrder(newOrder);
+      }
+    }
+  }, [households]);
+
+  // Set initial active household if not set
+  useEffect(() => {
+    if (sortedHouseholds.length > 0 && !activeHouseholdId) {
+      setActiveHouseholdId(sortedHouseholds[0].id);
+    }
+  }, [sortedHouseholds, activeHouseholdId]);
+
+  // Active household object - defaults to first sorted household
   const activeHousehold = useMemo(() => {
-    if (households.length === 0) return null;
-    return households.find(h => h.id === activeHouseholdId) || households[0];
-  }, [households, activeHouseholdId]);
+    if (sortedHouseholds.length === 0) return null;
+    return sortedHouseholds.find(h => h.id === activeHouseholdId) || sortedHouseholds[0];
+  }, [sortedHouseholds, activeHouseholdId]);
 
   // Initial redirect logic
   useEffect(() => {
@@ -84,11 +129,16 @@ function App() {
         isAuthenticated={isAuthenticated} 
         onProfileClick={() => navigate('/profile')} 
         onLogout={logout}
-        households={households}
+        households={sortedHouseholds}
         activeHousehold={activeHousehold}
         onSelectHousehold={(id) => {
           setActiveHouseholdId(id);
           navigate('/'); // Go home on switch
+        }}
+        onReorderHouseholds={(newOrder) => {
+          setHouseholdOrder(newOrder);
+          storageService.setHouseholdOrder(newOrder);
+          refetchHouseholds();
         }}
         onManageHousehold={() => navigate('/household')}
       />

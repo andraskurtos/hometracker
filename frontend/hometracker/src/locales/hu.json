@@ -11,7 +11,8 @@
     "dangerZone": "Veszélyzóna",
     "you": "Ön",
     "cancel": "Mégsem",
-    "settle": "Rendezés"
+    "settle": "Rendezés",
+    "upload": "Feltöltés"
   },
   "auth": {
     "signIn": "Bejelentkezés",
@@ -156,6 +157,11 @@
       "size": "Méret",
       "who": "Ki",
       "price": "Ár"
+    },
+    "upload": {
+      "title": "Blokk Szkennelése",
+      "subtitle": "Töltsön fel egy képet a blokkról az AI szkenneléshez!",
+      "selectFile": "Válassza ki a képet"
     },
     "debts": {
       "summary": "Tartozások összesítése",
