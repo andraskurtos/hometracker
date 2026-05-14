@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from routers.auth import get_current_user_id
 from config import DB_CONFIG, logger
 from receipt_reader import ReceiptReader as reader
@@ -18,6 +18,17 @@ class OwnerUpdate(BaseModel):
 
 class OwnersUpdate(BaseModel):
     owners: List[OwnerUpdate]
+
+OwnerUpdate.model_rebuild()
+OwnersUpdate.model_rebuild()
+
+class ReceiptItemUpdate(BaseModel):
+    name: Optional[str] = None
+    size: Optional[float] = None
+    quantity: Optional[float] = None
+    price_paid: Optional[float] = None
+
+ReceiptItemUpdate.model_rebuild()
 
 @router.post("/parse")
 async def parse_receipt(
@@ -361,6 +372,106 @@ def get_receipt_debts(
     except Exception as e:
         logger.error(f"Error calculating debts for receipt {receipt_id}: {e}")
         raise HTTPException(status_code=500, detail="Database error")
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
+
+@router.put("/{receipt_id}/items/{receipt_item_id}")
+def update_receipt_item(
+    receipt_id: int,
+    receipt_item_id: int,
+    payload: ReceiptItemUpdate,
+    user_id: str = Depends(get_current_user_id)
+):
+    """
+    Updates a specific receipt item's details.
+    Only the payee who is a member of the household can modify it.
+    If quantity or price changes, the item ownership is reset to the payee.
+    """
+    conn = None
+    cur = None
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # 1. Verify receipt and payee
+        cur.execute("SELECT payee, household_id FROM receipts WHERE id = %s", (receipt_id,))
+        receipt = cur.fetchone()
+        if not receipt:
+            raise HTTPException(status_code=404, detail="Receipt not found")
+        if receipt['payee'] != user_id:
+            raise HTTPException(status_code=403, detail="Access denied: Only the payee can modify receipt items")
+
+        # 2. Verify membership
+        cur.execute("SELECT 1 FROM household_members WHERE household_id = %s AND user_id = %s AND is_active = TRUE", (receipt['household_id'], user_id))
+        if not cur.fetchone():
+            raise HTTPException(status_code=403, detail="Access denied: You are no longer a member of this household")
+
+        # 3. Get existing item info
+        cur.execute("SELECT item_id, quantity, price_paid FROM receipt_items WHERE id = %s AND receipt_id = %s", (receipt_item_id, receipt_id))
+        ri = cur.fetchone()
+        if not ri:
+            raise HTTPException(status_code=404, detail="Receipt item not found")
+
+        item_id = ri['item_id']
+        old_total = round(float(ri['quantity']) * float(ri['price_paid']), 2)
+
+        # 4. Update items catalog (name, size)
+        if payload.name is not None or payload.size is not None:
+            updates = []
+            params = []
+            if payload.name is not None:
+                updates.append("name = %s")
+                params.append(payload.name)
+            if payload.size is not None:
+                updates.append("size = %s")
+                params.append(payload.size)
+            
+            if updates:
+                params.append(item_id)
+                cur.execute(f"UPDATE items SET {', '.join(updates)} WHERE id = %s", tuple(params))
+
+        # 5. Update receipt_items (quantity, price_paid)
+        new_quantity = payload.quantity if payload.quantity is not None else float(ri['quantity'])
+        new_price_paid = payload.price_paid if payload.price_paid is not None else float(ri['price_paid'])
+        new_total = round(new_quantity * new_price_paid, 2)
+
+        if payload.quantity is not None or payload.price_paid is not None:
+            cur.execute("""
+                UPDATE receipt_items 
+                SET quantity = %s, price_paid = %s 
+                WHERE id = %s
+            """, (new_quantity, new_price_paid, receipt_item_id))
+
+        # 6. Handle ownership reset if total changed
+        if abs(new_total - old_total) > 0.01:
+            cur.execute("DELETE FROM item_owners WHERE receipt_item_id = %s", (receipt_item_id,))
+            cur.execute("""
+                INSERT INTO item_owners (receipt_item_id, user_id, amount)
+                VALUES (%s, %s, %s)
+            """, (receipt_item_id, user_id, new_total))
+        elif payload.quantity is not None or payload.price_paid is not None:
+            # Even if total didn't change (rare but possible), update the payee's share if they are the only owner
+            cur.execute("SELECT COUNT(*) as count FROM item_owners WHERE receipt_item_id = %s", (receipt_item_id,))
+            if cur.fetchone()['count'] == 1:
+                cur.execute("UPDATE item_owners SET amount = %s WHERE receipt_item_id = %s", (new_total, receipt_item_id))
+
+        # 7. Update receipt total if item total changed
+        if abs(new_total - old_total) > 0.01:
+            diff = new_total - old_total
+            cur.execute("UPDATE receipts SET total = total + %s WHERE id = %s", (diff, receipt_id))
+
+        conn.commit()
+        return {"status": "success", "message": "Receipt item updated successfully"}
+
+    except HTTPException:
+        if conn: conn.rollback()
+        raise
+    except Exception as e:
+        if conn: conn.rollback()
+        logger.error(f"Error updating receipt item {receipt_item_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
     finally:
         if conn:
             cur.close()

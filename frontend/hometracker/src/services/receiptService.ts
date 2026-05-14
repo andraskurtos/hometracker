@@ -64,6 +64,7 @@ export interface UIItem {
   name: string;
   qty: number;
   size: string;
+  rawSize: number | null;
   price: number;
   owners: UIOwner[]; 
 }
@@ -120,6 +121,7 @@ export const receiptService = {
         name: item.name,
         qty: item.quantity,
         size: formatSize(item.size, item.size_type),
+        rawSize: item.size,
         price: Number(item.price_paid),
         owners: item.owners.map(o => ({
           userId: o.id,
@@ -204,6 +206,21 @@ export const receiptService = {
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.detail || 'Failed to delete receipt');
+    }
+
+    return await response.json();
+  },
+
+  updateReceiptItem: async (receiptId: number, itemId: number, payload: { name?: string, size?: number, quantity?: number, price_paid?: number }) => {
+    const response = await fetch(`${API_BASE_URL}/${receiptId}/items/${itemId}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to update receipt item');
     }
 
     return await response.json();

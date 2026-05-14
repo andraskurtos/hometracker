@@ -1,4 +1,4 @@
-import { ChevronDown, Plus, Upload, X, FileImage, Percent, Hash, Check, Trash2 } from 'lucide-react';
+import { ChevronDown, Plus, Upload, X, FileImage, Percent, Hash, Check, Trash2, AlertCircle, Pencil } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { type UIItem } from '@/services/receiptService';
 import { Button } from '@/components/ui/Button';
@@ -10,12 +10,12 @@ import { Spinner } from '@/components/ui/Spinner';
 import { StatCard } from '@/components/ui/StatCard';
 import { PageLayout } from '@/components/ui/PageLayout';
 import { PopupMenu } from '@/components/ui/PopupMenu';
-import { useReceiptDebts } from '../hooks/useReceipts';
+import { useReceiptDebts, useUpdateItemOwners, useUpdateReceiptItem } from '../hooks/useReceipts';
 import { useReceiptSplitterLogic } from '../hooks/useReceiptSplitterLogic';
 import { useSplitMenuLogic } from '../hooks/useSplitMenuLogic';
 import { storageService } from '@/services/storageService';
 import { type HouseholdMember } from '@/services/householdService';
-import { memo, useRef } from 'react';
+import { memo, useRef, useState } from 'react';
 
 interface ReceiptSplitterProps {
   householdId: string | null;
@@ -195,11 +195,134 @@ const ItemRow = ({
 }) => {
   const rowAnchorRef = useRef<HTMLDivElement>(null);
   const currentUserId = storageService.getUserId();
+  const { mutate: updateItem } = useUpdateReceiptItem();
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
+
+  const isPayee = receipt.payee === currentUserId;
+
+  const startEditing = (field: string, value: any) => {
+    if (!isPayee) return;
+    setEditingField(field);
+    setEditValue(value.toString());
+  };
+
+  const handleSave = () => {
+    if (!editingField) return;
+    
+    const payload: any = {};
+    const numValue = parseFloat(editValue);
+
+    if (editingField === 'name') payload.name = editValue;
+    if (editingField === 'qty') payload.quantity = isNaN(numValue) ? 0 : numValue;
+    if (editingField === 'size') payload.size = isNaN(numValue) ? null : numValue;
+    if (editingField === 'price') payload.price_paid = isNaN(numValue) ? 0 : numValue;
+
+    const currentField = editingField;
+    setEditingField(null);
+
+    updateItem({ receiptId: receipt.id, itemId: item.id, payload }, {
+      onSuccess: () => {
+        refetch();
+      },
+      onError: (err) => {
+        console.error("Update failed:", err);
+        alert("Failed to update item.");
+        setEditingField(currentField);
+      }
+    });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.currentTarget.blur();
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      setEditingField(null);
+    }
+  };
 
   return (
     <tr key={item.id} className="group hover:bg-neutral-800/20 transition-colors">
-      <td className="py-4 font-medium text-neutral-300">{item.name}</td>
-      <td className="py-4 text-neutral-500">{item.qty} <span className="text-[10px] opacity-60 ml-0.5">{item.size !== '-' ? item.size : ''}</span></td>
+      <td className="py-4 font-medium text-neutral-300 group/name relative">
+        {editingField === 'name' ? (
+          <input 
+            autoFocus
+            className="bg-neutral-900 border-2 border-emerald-500/50 rounded-xl px-2 py-1 text-sm w-full outline-none"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={handleSave}
+          />
+        ) : (
+          <div className="flex items-center gap-2">
+            <span>{item.name}</span>
+            {isPayee && (
+              <Pencil 
+                size={12} 
+                className="opacity-0 group-hover/name:opacity-50 cursor-pointer hover:!opacity-100 transition-opacity" 
+                onClick={() => startEditing('name', item.name)}
+              />
+            )}
+          </div>
+        )}
+      </td>
+      <td className="py-4 text-neutral-500">
+        <div className="flex items-center gap-2">
+          <div className="group/qty relative flex items-center gap-1">
+            {editingField === 'qty' ? (
+              <input 
+                autoFocus
+                type="number"
+                step="0.01"
+                className="bg-neutral-900 border-2 border-emerald-500/50 rounded-xl px-2 py-1 text-sm w-16 outline-none"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onBlur={handleSave}
+              />
+            ) : (
+              <>
+                <span>{item.qty}</span>
+                {isPayee && (
+                  <Pencil 
+                    size={10} 
+                    className="opacity-0 group-hover/qty:opacity-50 cursor-pointer hover:!opacity-100 transition-opacity" 
+                    onClick={() => startEditing('qty', item.qty)}
+                  />
+                )}
+              </>
+            )}
+          </div>
+          <div className="group/size relative flex items-center gap-1">
+            {editingField === 'size' ? (
+              <input 
+                autoFocus
+                type="number"
+                step="0.01"
+                className="bg-neutral-900 border-2 border-emerald-500/50 rounded-xl px-2 py-1 text-sm w-16 outline-none"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onBlur={handleSave}
+              />
+            ) : (
+              <>
+                <span className="text-[10px] opacity-60 ml-0.5">{item.size !== '-' ? item.size : ''}</span>
+                {isPayee && (
+                  <Pencil 
+                    size={10} 
+                    className="opacity-0 group-hover/size:opacity-50 cursor-pointer hover:!opacity-100 transition-opacity" 
+                    onClick={() => startEditing('size', item.rawSize || 0)}
+                  />
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </td>
       <td className="py-4 relative">
         <div 
           ref={rowAnchorRef}
@@ -236,7 +359,31 @@ const ItemRow = ({
           />
         )}
       </td>
-      <td className="py-4 text-right font-bold text-neutral-200">{(item.qty * item.price).toLocaleString()}</td>
+      <td className="py-4 text-right font-bold text-neutral-200 group/price relative">
+        {editingField === 'price' ? (
+          <input 
+            autoFocus
+            type="number"
+            step="0.01"
+            className="bg-neutral-900 border-2 border-emerald-500/50 rounded-xl px-2 py-1 text-sm w-24 text-right outline-none"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={handleSave}
+          />
+        ) : (
+          <div className="flex items-center justify-end gap-2">
+            <span>{(item.qty * item.price).toLocaleString()}</span>
+            {isPayee && (
+              <Pencil 
+                size={12} 
+                className="opacity-0 group-hover/price:opacity-50 cursor-pointer hover:!opacity-100 transition-opacity" 
+                onClick={() => startEditing('price', item.price)}
+              />
+            )}
+          </div>
+        )}
+      </td>
     </tr>
   );
 };
@@ -247,6 +394,7 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps) {
   const {
     serverReceipts,
     members,
+    currentHousehold,
     isLoading,
     isUploading,
     isDeleting,
@@ -303,24 +451,22 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps) {
                     <p className="text-sm text-neutral-500">{receipt.date}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2 md:gap-4">
+                  {receipt.payee === currentUserId && (
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteReceipt(receipt.id);
+                      }}
+                      disabled={isDeleting}
+                      className="p-2 rounded-xl text-neutral-600 hover:text-red-400 hover:bg-red-400/10 transition-all opacity-100 md:opacity-0 group-hover:opacity-100"
+                      title={t('common.confirmDelete')}
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
                   <p className="text-xl font-black text-emerald-400">{receipt.totalAmount.toLocaleString()}</p>
-                  <div className="flex items-center gap-2">
-                    {receipt.payee === currentUserId && (
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteReceipt(receipt.id);
-                        }}
-                        disabled={isDeleting}
-                        className="p-2 rounded-xl text-neutral-600 hover:text-red-400 hover:bg-red-400/10 transition-all opacity-0 group-hover:opacity-100"
-                        title={t('common.confirmDelete')}
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    )}
-                    <ChevronDown className={`text-neutral-600 transition-transform duration-300 ${expandedIds.has(receipt.id) && !closingReceiptIds.has(receipt.id) ? 'rotate-180' : ''}`} size={24} />
-                  </div>
+                  <ChevronDown className={`text-neutral-600 transition-transform duration-300 ${expandedIds.has(receipt.id) && !closingReceiptIds.has(receipt.id) ? 'rotate-180' : ''}`} size={24} />
                 </div>
               </div>
 
@@ -329,6 +475,27 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps) {
                   <div className="overflow-x-auto overflow-visible">
                     
                     <DebtBreakdown receiptId={receipt.id} settled={receipt.settled} members={members} />
+
+                    {(() => {
+                      const sumOfItems = receipt.items.reduce((sum: number, item: any) => sum + (item.qty * item.price), 0);
+                      const diff = receipt.totalAmount - sumOfItems;
+                      if (Math.abs(diff) > 0.01) {
+                        const type = diff > 0 ? t('groceries.warnings.missing') : t('groceries.warnings.surplus');
+                        return (
+                          <div className="mb-8 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
+                            <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={18} />
+                            <p className="text-xs font-medium text-amber-200/80 leading-relaxed">
+                              {t('groceries.warnings.parsingMismatch', { 
+                                type, 
+                                amount: Math.abs(diff).toLocaleString(), 
+                                currency: currentHousehold?.base_currency || 'HUF' 
+                              })}
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
 
                     <div className="mb-4 ml-1">
                       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500">{t('groceries.itemizedBreakdown')}</h4>

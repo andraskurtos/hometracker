@@ -49,6 +49,7 @@ Follow these strict extraction and math rules:
    *   Receipts often contain negative prices (e.g., Clubcard promotions, coupons) immediately following the target item or at the bottom of the receipt.
    *   **Formula:** (Total Combined Item Cost - Total Associated Discounts) / Total Combined Quantity = `price_paid`.
    *   *Example:* You buy 2 identical items for 1000 Ft total. The receipt shows a -200 Ft discount line below them. The total actual cost is 800 Ft. The final `price_paid` for the JSON is 400.
+   *   Items sold by weight can also have an informative per unit price noted on the receipt. (e.g. 0,286 KG * 1199 Ft/KG ...... 343) In this case, ignore the per unit price, and use the immediately following regular number as price (343 in case of example)
 
 Output EXACTLY this JSON structure:
 {

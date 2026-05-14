@@ -186,6 +186,11 @@
     "errors": {
       "uploadFailed": "Failed to upload receipt. Check console for details.",
       "deleteFailed": "Failed to delete receipt."
+    },
+    "warnings": {
+      "parsingMismatch": "AI parsing may have gone wrong. Please try either reparsing or modifying wrong entries. We are {{type}} of {{amount}} {{currency}}",
+      "missing": "missing",
+      "surplus": "in surplus"
     }
   }
 }

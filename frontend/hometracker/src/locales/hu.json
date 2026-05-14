@@ -185,6 +185,11 @@
     "errors": {
       "uploadFailed": "A blokk feltöltése sikertelen. Ellenőrizze a konzolt a részletekért.",
       "deleteFailed": "A blokk törlése sikertelen."
+    },
+    "warnings": {
+      "parsingMismatch": "Az AI feldolgozás során hiba történhetett. Kérjük, próbálja meg újra a feldolgozást vagy módosítsa a hibás tételeket. {{amount}} {{currency}} {{type}} mutatkozik.",
+      "missing": "hiány",
+      "surplus": "többlet"
     }
   }
 }

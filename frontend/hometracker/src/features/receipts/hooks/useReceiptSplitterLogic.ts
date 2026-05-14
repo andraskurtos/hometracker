@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useReceipts, useUploadReceipt, useDeleteReceipt } from './useReceipts';
-import { useHouseholdMembers } from '../../households/hooks/useHouseholds';
+import { useHouseholdMembers, useMyHouseholds } from '../../households/hooks/useHouseholds';
 
 export const useReceiptSplitterLogic = (householdId: string | null) => {
   const { t } = useTranslation();
@@ -14,6 +14,9 @@ export const useReceiptSplitterLogic = (householdId: string | null) => {
   } = useReceipts(householdId);
   
   const { data: members = [] } = useHouseholdMembers(householdId);
+  const { data: myHouseholds = [] } = useMyHouseholds(!!householdId);
+  const currentHousehold = myHouseholds.find(h => h.id === householdId);
+  
   const uploadMutation = useUploadReceipt(householdId);
   const deleteMutation = useDeleteReceipt();
 
@@ -82,6 +85,7 @@ export const useReceiptSplitterLogic = (householdId: string | null) => {
     // Data
     serverReceipts,
     members,
+    currentHousehold,
     isLoading: isLoadingReceipts,
     isUploading: uploadMutation.isPending,
     isDeleting: deleteMutation.isPending,
