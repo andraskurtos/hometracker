@@ -1,8 +1,8 @@
-import { useLaunchpadLogic } from './useLaunchpadLogic';
+import { useLaunchpadLogic } from '@/features/layout/hooks/useLaunchpadLogic';
 import { LaunchpadDesktop } from './LaunchpadDesktop';
 import { LaunchpadMobile } from './LaunchpadMobile';
-import { useMediaQuery } from '../hooks/useMediaQuery';
-import { GlobalDebtSummary } from './GlobalDebtSummary';
+import { useMediaQuery } from '@/features/shared/hooks/useMediaQuery';
+import { GlobalDebtSummary } from '@/features/households/components/GlobalDebtSummary';
 
 interface LaunchpadProps {
   activeHouseholdId?: string | null;

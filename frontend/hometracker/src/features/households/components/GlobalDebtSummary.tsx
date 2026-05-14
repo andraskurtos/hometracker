@@ -1,12 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { useGrossDebts, useHouseholdMembers } from '../hooks/useHouseholds';
-import { Badge } from './ui/Badge';
-import { Button } from './ui/Button';
-import { Avatar } from './ui/Avatar';
-import { Spinner } from './ui/Spinner';
-import { StatCard } from './ui/StatCard';
-import { useMediaQuery } from '../hooks/useMediaQuery';
+import { Avatar } from '../../../components/ui/Avatar';
+import { Spinner } from '../../../components/ui/Spinner';
+import { StatCard } from '../../../components/ui/StatCard';
 import { ExternalLink } from 'lucide-react';
+import { storageService } from '../../../services/storageService';
 
 interface GlobalDebtSummaryProps {
   householdId: string;
@@ -15,8 +13,7 @@ interface GlobalDebtSummaryProps {
 
 export const GlobalDebtSummary = ({ householdId, currency = 'HUF' }: GlobalDebtSummaryProps) => {
   const { t } = useTranslation();
-  const userId = localStorage.getItem('userId');
-  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const userId = storageService.getUserId();
   
   const { data: debts, isLoading: isLoadingDebts } = useGrossDebts(householdId, userId);
   const { data: members = [], isLoading: isLoadingMembers } = useHouseholdMembers(householdId);

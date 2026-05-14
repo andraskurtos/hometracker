@@ -10,6 +10,7 @@ interface AvatarProps {
   className?: string;
   borderColor?: string;
   fallbackIcon?: React.ReactNode;
+  style?: React.CSSProperties;
 }
 
 export const Avatar = ({
@@ -19,7 +20,8 @@ export const Avatar = ({
   size = 'md',
   className = '',
   borderColor = 'border-neutral-800',
-  fallbackIcon
+  fallbackIcon,
+  style
 }: AvatarProps) => {
   const sizeClasses = {
     xs: 'w-6 h-6 text-[8px]',
@@ -41,6 +43,7 @@ export const Avatar = ({
         ${borderColor}
         ${className}
       `}
+      style={style}
     >
       {fullUrl ? (
         <img 

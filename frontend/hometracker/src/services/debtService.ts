@@ -1,6 +1,6 @@
 // src/services/debtService.ts
 import { type UIOwner } from './receiptService';
-import { householdService, type GrossDebt } from './householdService';
+import { householdService } from './householdService';
 
 export const debtService = {
   getGrossDebts: householdService.fetchGrossDebts,

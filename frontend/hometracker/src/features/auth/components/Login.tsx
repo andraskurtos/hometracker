@@ -1,11 +1,8 @@
-import React, { useState, useEffect } from 'react';
 import { Mail, Lock, ArrowRight, User } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { userService } from '../services/userService';
-import { Card } from './ui/Card';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { useLoginLogic } from '../hooks/useLoginLogic';
 
 interface LoginProps {
   onLoginSuccess: (token: string, userId: string, userName: string) => void;
@@ -13,61 +10,28 @@ interface LoginProps {
 }
 
 export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const [mode, setMode] = useState<'login' | 'register'>(initialMode);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
-  // Sync state if initialMode prop changes (e.g. browser navigation)
-  useEffect(() => {
-    setMode(initialMode);
-    setError('');
-    setSuccess('');
-  }, [initialMode]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
-    setSuccess('');
-
-    if (mode === 'register' && password !== confirmPassword) {
-      setError(t('auth.passwordsDoNotMatch'));
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      if (mode === 'login') {
-        const data = await userService.login(email, password);
-        onLoginSuccess(data.access_token, data.user.id, data.user.first_name);
-      } else {
-        await userService.register(email, password, firstName, lastName);
-        setSuccess(t('auth.accountCreated'));
-        navigate('/login');
-        setPassword('');
-        setConfirmPassword('');
-      }
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const isFormValid = () => {
-    if (mode === 'login') {
-      return email && password;
-    }
-    return email && password && confirmPassword && firstName && lastName;
-  };
+  const logic = useLoginLogic({ onLoginSuccess, initialMode });
+  const {
+    t,
+    mode,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    confirmPassword,
+    setConfirmPassword,
+    firstName,
+    setFirstName,
+    lastName,
+    setLastName,
+    isLoading,
+    error,
+    success,
+    handleSubmit,
+    isFormValid,
+    toggleMode,
+    goToLanding
+  } = logic;
 
   return (
     <Card className="w-full max-w-md relative overflow-hidden">
@@ -174,7 +138,7 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
 
         <div className="mt-8 text-center">
           <button 
-            onClick={() => navigate(mode === 'login' ? '/register' : '/login')}
+            onClick={toggleMode}
             className="text-neutral-500 hover:text-emerald-400 transition-colors text-sm font-medium"
           >
             {mode === 'login' 
@@ -185,7 +149,7 @@ export default function Login({ onLoginSuccess, initialMode }: LoginProps) {
 
         <div className="mt-4 text-center">
           <button 
-            onClick={() => navigate('/landing')}
+            onClick={goToLanding}
             className="text-neutral-600 hover:text-neutral-400 transition-colors text-xs"
           >
             {t('auth.backToLanding')}

@@ -1,5 +1,5 @@
-import { Card } from './ui/Card';
-import { type LaunchpadLogic } from './useLaunchpadLogic';
+import { Card } from '@/components/ui/Card';
+import { type LaunchpadLogic } from '@/features/layout/hooks/useLaunchpadLogic';
 
 interface LaunchpadMobileProps {
   logic: LaunchpadLogic;
@@ -11,7 +11,7 @@ export const LaunchpadMobile = ({ logic }: LaunchpadMobileProps) => {
   return (
     <div className="w-full px-6 py-12 flex flex-col items-center">
       <div className="grid grid-cols-2 gap-6 w-full max-w-sm">
-        {modules.map((mod) => {
+        {modules.map((mod: LaunchpadLogic['modules'][number]) => {
           const Icon = mod.icon;
           return (
             <Card

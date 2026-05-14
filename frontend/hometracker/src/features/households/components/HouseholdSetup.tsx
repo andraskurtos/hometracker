@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Home, UserPlus, ArrowRight, Sparkles, LayoutGrid } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Card } from './ui/Card';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { useCreateHousehold, useJoinHousehold } from '../hooks/useHouseholds';
 
 interface HouseholdSetupProps {
@@ -19,7 +19,7 @@ export default function HouseholdSetup({ onSuccess }: HouseholdSetupProps) {
   const createMutation = useCreateHousehold();
   const joinMutation = useJoinHousehold();
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     try {
@@ -34,7 +34,7 @@ export default function HouseholdSetup({ onSuccess }: HouseholdSetupProps) {
     }
   };
 
-  const handleJoin = async (e: React.FormEvent) => {
+  const handleJoin = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     try {

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { householdService, type HouseholdUpdate } from '../services/householdService';
-import { queryKeys } from './queryKeys';
+import { householdService, type HouseholdUpdate } from '../../../services/householdService';
+import { queryKeys } from '../../shared/hooks/queryKeys';
 
 export const useMyHouseholds = (enabled: boolean = true) => {
   return useQuery({

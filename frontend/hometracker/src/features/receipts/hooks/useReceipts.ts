@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { receiptService, type UIOwner } from '../services/receiptService';
-import { queryKeys } from './queryKeys';
+import { receiptService, type UIOwner } from '@/services/receiptService';
+import { queryKeys } from '@/features/shared/hooks/queryKeys';
 
 export const useReceipts = (householdId: string | null) => {
   return useQuery({

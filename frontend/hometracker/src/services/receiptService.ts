@@ -1,4 +1,4 @@
-// src/services/receiptService.ts
+import { storageService } from './storageService';
 
 const API_BASE_URL = `http://${window.location.hostname}:8000/api/receipts`;
 
@@ -6,7 +6,7 @@ const getHeaders = () => {
     const headers: HeadersInit = {
         'Content-Type': 'application/json',
     };
-    const token = localStorage.getItem('token');
+    const token = storageService.getToken();
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
@@ -146,7 +146,7 @@ export const receiptService = {
     const formData = new FormData();
     formData.append('file', file);
 
-    const token = localStorage.getItem('token');
+    const token = storageService.getToken();
     const response = await fetch(`${API_BASE_URL}/parse?household_id=${householdId}`, {
       method: 'POST',
       headers: {

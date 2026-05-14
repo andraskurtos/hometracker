@@ -1,8 +1,8 @@
-import { useNavbarLogic } from './useNavbarLogic';
+import { useNavbarLogic } from '@/features/layout/hooks/useNavbarLogic';
 import { NavbarDesktop } from './NavbarDesktop';
 import { NavbarMobile } from './NavbarMobile';
-import { useMediaQuery } from '../hooks/useMediaQuery'; // You'll need a simple window.matchMedia hook
-import type { Household } from '../services/householdService';
+import { useMediaQuery } from '@/features/shared/hooks/useMediaQuery';
+import type { Household } from '@/services/householdService';
 
 export interface NavbarProps {
   onProfileClick: () => void;

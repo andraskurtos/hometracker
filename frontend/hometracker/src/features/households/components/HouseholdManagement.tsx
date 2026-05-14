@@ -1,12 +1,12 @@
 import { Home, Copy, Check, Users, Shield, RefreshCw, Pencil, Trash2, UserPlus, Loader2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type Household } from '../services/householdService';
-import { getAssetUrl } from '../utils/assetUtils';
-import { Card } from './ui/Card';
-import { Button } from './ui/Button';
-import { ReturnButton } from './ui/ReturnButton';
-import { Badge } from './ui/Badge';
+import { getAssetUrl } from '@/utils/assetUtils';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { ReturnButton } from '@/components/ui/ReturnButton';
+import { Badge } from '@/components/ui/Badge';
+import type { Household } from '@/services/householdService';
 import { 
   useHouseholdMembers, 
   useUpdateHousehold, 
@@ -36,7 +36,7 @@ const EditableHeader = ({
   onCancel, 
   t 
 }: any) => {
-  const onKeyDown = (e: React.KeyboardEvent) => {
+  const onKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       onSave(field);

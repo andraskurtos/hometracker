@@ -1,9 +1,10 @@
 import { Menu, X, User, LogOut, Settings, Plus } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { NavbarProps } from './Navbar';
+import { useNavbarLogic } from '@/features/layout/hooks/useNavbarLogic';
 
 interface MobileProps extends NavbarProps {
-  logic: ReturnType<typeof import('./useNavbarLogic').useNavbarLogic>;
+  logic: ReturnType<typeof useNavbarLogic>;
 }
 
 export const NavbarMobile = ({ logic, ...props }: MobileProps) => {

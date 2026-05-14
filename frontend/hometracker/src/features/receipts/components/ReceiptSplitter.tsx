@@ -1,30 +1,31 @@
-import React, { useState, useEffect, useRef, useMemo, type JSX } from 'react';
 import { ChevronDown, Plus, Upload, X, FileImage, Percent, Hash, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { type UIOwner, type UIItem, receiptService } from '../services/receiptService';
-import { calculateShares, distributeEvenly, convertSharesMode } from '../services/debtService';
-import { Button } from './ui/Button';
-import { Card } from './ui/Card';
-import { Checkbox } from './ui/Checkbox';
-import { Badge } from './ui/Badge';
-import { Avatar } from './ui/Avatar';
-import { Spinner } from './ui/Spinner';
-import { StatCard } from './ui/StatCard';
-import { PageLayout } from './ui/PageLayout';
-import { useReceipts, useUploadReceipt, useUpdateItemOwners, useReceiptDebts } from '../hooks/useReceipts';
-import { useHouseholdMembers } from '../hooks/useHouseholds';
+import { type UIItem } from '@/services/receiptService';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Checkbox } from '@/components/ui/Checkbox';
+import { Badge } from '@/components/ui/Badge';
+import { Avatar } from '@/components/ui/Avatar';
+import { Spinner } from '@/components/ui/Spinner';
+import { StatCard } from '@/components/ui/StatCard';
+import { PageLayout } from '@/components/ui/PageLayout';
+import { PopupMenu } from '@/components/ui/PopupMenu';
+import { useReceiptDebts } from '../hooks/useReceipts';
+import { useReceiptSplitterLogic } from '../hooks/useReceiptSplitterLogic';
+import { useSplitMenuLogic } from '../hooks/useSplitMenuLogic';
+import { storageService } from '@/services/storageService';
+import { type HouseholdMember } from '@/services/householdService';
+import { memo, useRef } from 'react';
 
 interface ReceiptSplitterProps {
   householdId: string | null;
 }
 
-type SplitMode = 'percent' | 'pcs';
-
 // --- SUB-COMPONENT: DEBT BREAKDOWN ---
-const DebtBreakdown = ({ receiptId, settled, members }: { receiptId: number, settled: boolean, members: any[] }) => {
+const DebtBreakdown = ({ receiptId, settled, members }: { receiptId: number, settled: boolean, members: HouseholdMember[] }) => {
   const { t } = useTranslation();
   const { data: debts, isLoading } = useReceiptDebts(receiptId);
-  const currentUserId = localStorage.getItem('userId');
+  const currentUserId = storageService.getUserId();
 
   if (isLoading || !debts) return (
     <div className="flex items-center gap-3 text-neutral-500 py-6">
@@ -63,7 +64,7 @@ const DebtBreakdown = ({ receiptId, settled, members }: { receiptId: number, set
 
       {/* Debtors List */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {debts.debtors.map((d, idx) => (
+        {debts.debtors.map((d: any, idx: number) => (
           <StatCard 
             key={idx}
             variant="neutral"
@@ -92,100 +93,41 @@ const DebtBreakdown = ({ receiptId, settled, members }: { receiptId: number, set
 };
 
 // --- SUB-COMPONENT: SPLIT MENU ---
-const SplitMenu = React.memo(({ 
+const SplitMenu = memo(({ 
   receiptId, 
   item, 
   householdId, 
   onClose, 
-  onSuccess 
+  onSuccess,
+  anchorRef
 }: { 
   receiptId: number, 
   item: UIItem, 
   householdId: string, 
   onClose: () => void, 
-  onSuccess: () => void 
+  onSuccess: () => void,
+  anchorRef: React.RefObject<HTMLElement | null>
 }) => {
-  const { t } = useTranslation();
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const [isClosing, setIsClosing] = useState(false);
-  const [splitMode, setSplitMode] = useState<SplitMode>('percent');
-  const [tempShares, setTempShares] = useState<Record<string, number>>({});
-  const { data: members = [] } = useHouseholdMembers(householdId);
-  const updateOwnersMutation = useUpdateItemOwners();
-
-  // Initial sync from item.owners
-  useEffect(() => {
-    const initial: Record<string, number> = {};
-    item.owners.forEach(o => {
-      initial[o.user_id] = splitMode === 'percent' ? o.weight : (o.weight / 100) * item.qty;
-    });
-    setTempShares(initial);
-  }, [item.id, splitMode, item.qty]);
-
-  // Handle click outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        handleClose();
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(onClose, 200);
-  };
-
-  const handleModeSwitch = (newMode: SplitMode) => {
-    if (newMode === splitMode) return;
-    setTempShares(prev => convertSharesMode(prev, item.qty, newMode));
-    setSplitMode(newMode);
-  };
-
-  const toggleUserInSplit = (userId: string) => {
-    const currentUsers = Object.keys(tempShares).filter(uid => tempShares[uid] > 0);
-    const isAlreadyIn = tempShares[userId] > 0;
-    const nextUsers = isAlreadyIn ? currentUsers.filter(uid => uid !== userId) : [...currentUsers, userId];
-
-    const target = splitMode === 'percent' ? 100 : item.qty;
-    setTempShares(distributeEvenly(target, nextUsers));
-  };
-
-  const metrics = useMemo(() => {
-    const total = Object.values(tempShares).reduce((a, b) => a + b, 0);
-    const target = splitMode === 'percent' ? 100 : item.qty;
-    const isValid = Math.abs(total - target) < 0.001;
-    return { total, target, isValid };
-  }, [tempShares, splitMode, item.qty]);
-
-  const handleSave = async () => {
-    if (!metrics.isValid) return;
-
-    const totalItemPrice = item.qty * item.price;
-    const usersInSplit = Object.entries(tempShares)
-        .filter(([_, val]) => val > 0)
-        .map(([uid, val]) => ({
-            userId: uid,
-            weight: splitMode === 'percent' ? val : (val / item.qty) * 100
-        }));
-    
-    const owners = calculateShares(totalItemPrice, usersInSplit);
-
-    try {
-      await updateOwnersMutation.mutateAsync({ receiptId, itemId: item.id, owners });
-      onSuccess();
-      handleClose();
-    } catch (error: any) {
-      alert(error.message || "Failed to update owners");
-    }
-  };
+  const logic = useSplitMenuLogic({ receiptId, item, householdId, onClose, onSuccess });
+  const { 
+    t, 
+    isClosing, 
+    splitMode, 
+    tempShares, 
+    members, 
+    metrics, 
+    isUpdating, 
+    handleModeSwitch, 
+    toggleUserInSplit, 
+    handleSave,
+    updateShareManually
+  } = logic;
 
   return (
-    <div 
-      ref={dropdownRef} 
-      className={`absolute top-full right-0 mt-4 min-w-[340px] max-w-md bg-neutral-900 border-2 border-neutral-800 rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.9)] z-[100] p-6 backdrop-blur-2xl flex flex-col ${isClosing ? 'animate-popup-out' : 'animate-popup-in'}`}
+    <PopupMenu 
+      anchorRef={anchorRef} 
+      onClose={onClose}
+      className={`mt-4 min-w-[340px] max-w-md bg-neutral-900 border-2 border-neutral-800 rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.9)] p-6 backdrop-blur-2xl flex flex-col ${isClosing ? 'animate-popup-out' : 'animate-popup-in'}`}
     >
       <div className="flex flex-col gap-3 max-h-[min(70vh,500px)] overflow-y-auto pr-0 scrollbar-hide">
         {members.map(member => {
@@ -203,7 +145,14 @@ const SplitMenu = React.memo(({
               />
               <span className="flex-1 text-sm font-black text-neutral-100 tracking-tight truncate">{member.display_name || `${member.first_name} ${member.last_name}`}</span>
               <div className="relative group/input" onClick={(e) => e.stopPropagation()}>
-                <input type="number" value={tempShares[member.id] || 0} onChange={(e) => setTempShares(prev => ({ ...prev, [member.id]: parseFloat(e.target.value) || 0 }))} className="w-24 bg-neutral-950 border-2 border-neutral-800 rounded-2xl px-3 py-2.5 text-lg font-black font-mono text-emerald-400 text-right focus:outline-none focus:border-emerald-500 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-inner" placeholder="0" step="0.01" />
+                <input 
+                    type="number" 
+                    value={tempShares[member.id] || 0} 
+                    onChange={(e) => updateShareManually(member.id, parseFloat(e.target.value) || 0)} 
+                    className="w-24 bg-neutral-950 border-2 border-neutral-800 rounded-2xl px-3 py-2.5 text-lg font-black font-mono text-emerald-400 text-right focus:outline-none focus:border-emerald-500 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-inner" 
+                    placeholder="0" 
+                    step="0.01" 
+                />
               </div>
             </Card>
           );
@@ -220,61 +169,103 @@ const SplitMenu = React.memo(({
             <button onClick={() => handleModeSwitch('pcs')} className={`p-2 rounded-xl transition-all ${splitMode === 'pcs' ? 'bg-neutral-800 text-emerald-400 shadow-xl' : 'text-neutral-600 hover:text-neutral-400'}`} title="Pieces"><Hash size={18} /></button>
           </div>
         </div>
-        <Button variant="primary" className="w-full !py-4 text-sm font-black uppercase tracking-[0.2em] shadow-emerald-500/20 shadow-xl rounded-2xl" onClick={handleSave} disabled={!metrics.isValid} isLoading={updateOwnersMutation.isPending}>{metrics.isValid ? t('groceries.debts.applySplit') : t('groceries.debts.invalidSplit')}</Button>
+        <Button variant="primary" className="w-full !py-4 text-sm font-black uppercase tracking-[0.2em] shadow-emerald-500/20 shadow-xl rounded-2xl" onClick={handleSave} disabled={!metrics.isValid} isLoading={isUpdating}>{metrics.isValid ? t('groceries.debts.applySplit') : t('groceries.debts.invalidSplit')}</Button>
       </div>
-    </div>
+    </PopupMenu>
   );
 });
 
+// --- SUB-COMPONENT: ITEM ROW ---
+const ItemRow = ({ 
+  item, 
+  receipt, 
+  members, 
+  activeSplitId, 
+  setActiveSplitId, 
+  householdId, 
+  refetch
+}: { 
+  item: UIItem, 
+  receipt: any, 
+  members: HouseholdMember[], 
+  activeSplitId: any, 
+  setActiveSplitId: (val: any) => void,
+  householdId: string,
+  refetch: () => void
+}) => {
+  const rowAnchorRef = useRef<HTMLDivElement>(null);
+  const currentUserId = storageService.getUserId();
+
+  return (
+    <tr key={item.id} className="group hover:bg-neutral-800/20 transition-colors">
+      <td className="py-4 font-medium text-neutral-300">{item.name}</td>
+      <td className="py-4 text-neutral-500">{item.qty} <span className="text-[10px] opacity-60 ml-0.5">{item.size !== '-' ? item.size : ''}</span></td>
+      <td className="py-4 relative">
+        <div 
+          ref={rowAnchorRef}
+          onClick={() => {
+            if (receipt.payee == currentUserId) {
+              setActiveSplitId({ receiptId: receipt.id, itemId: item.id });
+            }
+          }} 
+          className={`flex items-center justify-center -space-x-3 group/stack ${receipt.payee == currentUserId ? 'cursor-pointer' : 'cursor-default'}`}
+        >
+          {members.filter((m: HouseholdMember) => item.owners.some((o: any) => o.userId === m.id)).slice(0, 3).map((member: HouseholdMember, idx: number) => (
+            <Avatar 
+              key={member.id}
+              src={member.profile_pic_url}
+              firstName={member.first_name}
+              lastName={member.last_name}
+              size="sm"
+              className="ring-2 ring-neutral-900 group-hover/stack:translate-x-1 transition-transform"
+              style={{ zIndex: 10 - idx }}
+            />
+          ))}
+          {item.owners.length > 3 && <div className="w-8 h-8 rounded-full border-2 border-neutral-900 bg-neutral-800 flex items-center justify-center text-[10px] font-bold text-neutral-400 relative z-0 transition-transform group-hover/stack:translate-x-1">+{item.owners.length - 3}</div>}
+          {item.owners.length === 0 && <div className="w-8 h-8 rounded-full border-2 border-dashed border-neutral-800 flex items-center justify-center text-neutral-600"><Plus size={14} /></div>}
+        </div>
+
+        {activeSplitId?.itemId === item.id && activeSplitId?.receiptId === receipt.id && (
+          <SplitMenu 
+            receiptId={receipt.id}
+            item={item}
+            householdId={householdId}
+            onClose={() => setActiveSplitId(null)}
+            onSuccess={() => refetch()}
+            anchorRef={rowAnchorRef}
+          />
+        )}
+      </td>
+      <td className="py-4 text-right font-bold text-neutral-200">{(item.qty * item.price).toLocaleString()}</td>
+    </tr>
+  );
+};
+
 // --- MAIN COMPONENT ---
-export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): JSX.Element {
-  const { t } = useTranslation();
-  const { data: serverReceipts = [], isLoading: isLoadingReceipts, refetch } = useReceipts(householdId);
-  const { data: members = [] } = useHouseholdMembers(householdId);
-  const uploadMutation = useUploadReceipt(householdId);
+export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps) {
+  const logic = useReceiptSplitterLogic(householdId);
+  const {
+    serverReceipts,
+    members,
+    isLoading,
+    isUploading,
+    expandedIds,
+    closingReceiptIds,
+    toggleAccordion,
+    activeSplitId,
+    setActiveSplitId,
+    isModalOpen,
+    selectedFile,
+    fileInputRef,
+    openUploadModal,
+    closeUploadModal,
+    handleUpload,
+    handleFileChange,
+    refetch,
+    t
+  } = logic;
 
-  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
-  const [closingReceiptIds, setClosingReceiptIds] = useState<Set<number>>(new Set());
-  const [activeSplitId, setActiveSplitId] = useState<{ receiptId: number, itemId: number } | null>(null);
-
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (serverReceipts.length > 0 && expandedIds.size === 0) {
-      // Auto-expand first receipt if needed or just leave as is
-    }
-  }, [serverReceipts]);
-
-  const toggleAccordion = (id: number) => {
-    if (expandedIds.has(id)) {
-      setClosingReceiptIds(new Set([id]));
-      setTimeout(() => {
-        setExpandedIds(prev => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-        setClosingReceiptIds(new Set());
-      }, 500);
-    } else {
-      setExpandedIds(prev => new Set([...prev, id]));
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!selectedFile) return;
-    try {
-      await uploadMutation.mutateAsync(selectedFile);
-      setSelectedFile(null);
-      setIsModalOpen(false);
-    } catch (err) {
-      alert(t('groceries.upload.error'));
-    }
-  };
-
-  if (isLoadingReceipts && serverReceipts.length === 0) {
+  if (isLoading && serverReceipts.length === 0) {
     return (
       <div className="w-full h-64 flex flex-col items-center justify-center">
         <Spinner size="lg" />
@@ -286,7 +277,7 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
   return (
     <PageLayout maxWidth="4xl" className="relative pb-24">
       <div className="fixed bottom-10 right-10 z-40">
-        <Button variant="primary" className="w-16 h-16 rounded-full shadow-2xl !p-0 flex items-center justify-center" onClick={() => setIsModalOpen(true)} icon={<Plus size={24} />}>
+        <Button variant="primary" className="w-16 h-16 rounded-full shadow-2xl !p-0 flex items-center justify-center" onClick={openUploadModal} icon={<Plus size={24} />}>
           {''}
         </Button>
       </div>
@@ -298,7 +289,7 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
             <p className="text-lg font-medium">{t('groceries.noReceipts')}</p>
           </div>
         ) : (
-          serverReceipts.map(receipt => (
+          serverReceipts.map((receipt: any) => (
             <Card key={receipt.id} className="overflow-hidden" padding="p-0">
               <div onClick={() => toggleAccordion(receipt.id)} className="flex items-center justify-between p-6 cursor-pointer hover:bg-neutral-800/40 transition-colors group">
                 <div className="flex items-center gap-4">
@@ -334,47 +325,17 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-neutral-800/40">
-                        {receipt.items.map(item => (
-                          <tr key={item.id} className="group hover:bg-neutral-800/20 transition-colors">
-                            <td className="py-4 font-medium text-neutral-300">{item.name}</td>
-                            <td className="py-4 text-neutral-500">{item.qty} <span className="text-[10px] opacity-60 ml-0.5">{item.size !== '-' ? item.size : ''}</span></td>
-                            <td className="py-4 relative">
-                              <div 
-                                onClick={() => {
-                                  const currentUserId = localStorage.getItem('userId');
-                                  if (receipt.payee == currentUserId) {
-                                    setActiveSplitId({ receiptId: receipt.id, itemId: item.id });
-                                  }
-                                }} 
-                                className={`flex items-center justify-center -space-x-3 group/stack ${receipt.payee == localStorage.getItem('userId') ? 'cursor-pointer' : 'cursor-default'}`}
-                              >
-                                {members.filter(m => item.owners.some(o => o.user_id === m.id)).slice(0, 3).map((member, idx) => (
-                                  <Avatar 
-                                    key={member.id}
-                                    src={member.profile_pic_url}
-                                    firstName={member.first_name}
-                                    lastName={member.last_name}
-                                    size="sm"
-                                    className="ring-2 ring-neutral-900 group-hover/stack:translate-x-1 transition-transform"
-                                    style={{ zIndex: 10 - idx }}
-                                  />
-                                ))}
-                                {item.owners.length > 3 && <div className="w-8 h-8 rounded-full border-2 border-neutral-900 bg-neutral-800 flex items-center justify-center text-[10px] font-bold text-neutral-400 relative z-0 transition-transform group-hover/stack:translate-x-1">+{item.owners.length - 3}</div>}
-                                {item.owners.length === 0 && <div className="w-8 h-8 rounded-full border-2 border-dashed border-neutral-800 flex items-center justify-center text-neutral-600"><Plus size={14} /></div>}
-                              </div>
-
-                              {activeSplitId?.itemId === item.id && (
-                                <SplitMenu 
-                                  receiptId={receipt.id}
-                                  item={item}
-                                  householdId={householdId!}
-                                  onClose={() => setActiveSplitId(null)}
-                                  onSuccess={() => refetch()}
-                                />
-                              )}
-                            </td>
-                            <td className="py-4 text-right font-bold text-neutral-200">{(item.qty * item.price).toLocaleString()}</td>
-                          </tr>
+                        {receipt.items.map((item: UIItem) => (
+                          <ItemRow 
+                            key={item.id}
+                            item={item}
+                            receipt={receipt}
+                            members={members}
+                            activeSplitId={activeSplitId}
+                            setActiveSplitId={setActiveSplitId}
+                            householdId={householdId!}
+                            refetch={refetch}
+                          />
                         ))}
                       </tbody>
                     </table>
@@ -389,9 +350,9 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
       {/* Upload Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-neutral-950/80 backdrop-blur-sm" onClick={() => !uploadMutation.isPending && setIsModalOpen(false)} />
+          <div className="absolute inset-0 bg-neutral-950/80 backdrop-blur-sm" onClick={closeUploadModal} />
           <Card className="w-full max-w-md relative animate-in zoom-in-95 duration-200" padding="p-8">
-            <button onClick={() => !uploadMutation.isPending && setIsModalOpen(false)} className="absolute top-4 right-4 p-2 text-neutral-500 hover:text-neutral-200 transition-colors"><X size={20} /></button>
+            <button onClick={closeUploadModal} className="absolute top-4 right-4 p-2 text-neutral-500 hover:text-neutral-200 transition-colors"><X size={20} /></button>
             <div className="flex flex-col items-center text-center gap-6">
               <div className="w-20 h-20 rounded-3xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
                 <Upload size={40} />
@@ -405,7 +366,7 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
                 onClick={() => fileInputRef.current?.click()}
                 className={`w-full py-12 border-2 border-dashed rounded-3xl transition-all cursor-pointer flex flex-col items-center gap-3 ${selectedFile ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-neutral-800 hover:border-neutral-700 bg-neutral-950/50'}`}
               >
-                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => { if (e.target.files && e.target.files.length > 0) setSelectedFile(e.target.files[0]); }} />
+                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
                 {selectedFile ? (
                   <>
                     <div className="p-3 rounded-2xl bg-emerald-500 text-neutral-950"><Check size={24} /></div>
@@ -420,8 +381,8 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
               </div>
 
               <div className="flex gap-3 w-full">
-                <Button variant="neutral" className="flex-1" onClick={() => setIsModalOpen(false)} disabled={uploadMutation.isPending}>{t('common.cancel')}</Button>
-                <Button variant="primary" className="flex-1" onClick={handleUpload} disabled={!selectedFile || uploadMutation.isPending} isLoading={uploadMutation.isPending}>{uploadMutation.isPending ? t('groceries.modal.analyzing') : t('common.upload')}</Button>
+                <Button variant="neutral" className="flex-1" onClick={closeUploadModal} disabled={isUploading}>{t('common.cancel')}</Button>
+                <Button variant="primary" className="flex-1" onClick={handleUpload} disabled={!selectedFile || isUploading} isLoading={isUploading}>{isUploading ? t('groceries.modal.analyzing') : t('common.upload')}</Button>
               </div>
             </div>
           </Card>
@@ -430,3 +391,4 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps): 
     </PageLayout>
   );
 }
+

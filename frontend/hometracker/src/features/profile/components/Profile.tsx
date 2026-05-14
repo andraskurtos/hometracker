@@ -1,16 +1,14 @@
-import React, { useEffect, useState } from 'react';
 import { User, ShieldCheck, CreditCard, Camera, CheckCircle2, Loader2 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { Card } from './ui/Card';
-import { Button } from './ui/Button';
-import { ReturnButton } from './ui/ReturnButton';
-import { Input } from './ui/Input';
-import { Badge } from './ui/Badge';
-import { GlassSection } from './ui/GlassSection';
-import { Avatar } from './ui/Avatar';
-import { Spinner } from './ui/Spinner';
-import { PageLayout } from './ui/PageLayout';
-import { useProfile, useUpdateProfile, useUploadAvatar } from '../hooks/useProfile';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { ReturnButton } from '@/components/ui/ReturnButton';
+import { Input } from '@/components/ui/Input';
+import { Badge } from '@/components/ui/Badge';
+import { GlassSection } from '@/components/ui/GlassSection';
+import { Avatar } from '@/components/ui/Avatar';
+import { Spinner } from '@/components/ui/Spinner';
+import { PageLayout } from '@/components/ui/PageLayout';
+import { useProfileLogic } from '../hooks/useProfileLogic';
 
 interface ProfileProps {
   onBack: () => void;
@@ -18,87 +16,21 @@ interface ProfileProps {
 }
 
 export default function Profile({ onBack }: ProfileProps) {
-  const { t } = useTranslation();
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  
-  // Queries & Mutations
-  const { data: profile, isLoading } = useProfile();
-  const updateProfileMutation = useUpdateProfile();
-  const uploadAvatarMutation = useUploadAvatar();
-
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    displayName: '',
-    gender: '',
-    dob: '',
-    revolutUser: '',
-    discordId: '',
-    profilePicUrl: ''
-  });
-
-  const [saveSuccess, setSaveSuccess] = useState(false);
-
-  // --- 1. SYNC PROFILE DATA ---
-  useEffect(() => {
-    if (profile) {
-      setFormData({
-        firstName: profile.first_name || '',
-        lastName: profile.last_name || '',
-        displayName: profile.display_name || '',
-        gender: profile.gender || '',
-        dob: profile.date_of_birth || '',
-        revolutUser: profile.revolut_username || '',
-        discordId: profile.discord_id || '',
-        profilePicUrl: profile.profile_pic_url || ''
-      });
-    }
-  }, [profile]);
-
-  const handleAvatarClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      try {
-        await uploadAvatarMutation.mutateAsync(file);
-      } catch (err) {
-        alert(t('profile.errors.uploadFailed'));
-      }
-    }
-  };
-
-  // --- 2. SAVE CHANGES ---
-  const handleSave = async () => {
-    setSaveSuccess(false);
-
-    // Map frontend state back to backend column names
-    const payload = {
-      first_name: formData.firstName,
-      last_name: formData.lastName,
-      display_name: formData.displayName,
-      gender: formData.gender,
-      date_of_birth: formData.dob || null, // Important: pass null if empty string
-      revolut_username: formData.revolutUser,
-      discord_id: formData.discordId
-    };
-
-    try {
-      await updateProfileMutation.mutateAsync(payload);
-      setSaveSuccess(true);
-      // Hide success message after 3 seconds
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err) {
-      alert(t('profile.errors.saveFailed'));
-    }
-  };
-
-  const isFieldEmpty = (value: string) => !value || value.trim() === '';
-  const handleInputChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  const logic = useProfileLogic(onBack);
+  const {
+    t,
+    formData,
+    isLoading,
+    isSaving,
+    isUploadingAvatar,
+    saveSuccess,
+    fileInputRef,
+    handleAvatarClick,
+    handleFileChange,
+    handleSave,
+    handleInputChange,
+    isFieldEmpty,
+  } = logic;
 
   if (isLoading) {
     return (
@@ -148,9 +80,9 @@ export default function Profile({ onBack }: ProfileProps) {
           <button 
             className="absolute bottom-0 right-0 p-2.5 bg-emerald-500 text-neutral-950 rounded-full hover:scale-110 transition-transform shadow-lg disabled:opacity-50 z-10" 
             onClick={handleAvatarClick}
-            disabled={uploadAvatarMutation.isPending}
+            disabled={isUploadingAvatar}
           >
-            {uploadAvatarMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
+            {isUploadingAvatar ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
           </button>
         </div>
         <div className="flex-1 text-center md:text-left">
@@ -164,21 +96,21 @@ export default function Profile({ onBack }: ProfileProps) {
         <Input 
           label={t('profile.fields.firstName')} 
           value={formData.firstName} 
-          onChange={(e) => handleInputChange('firstName', e.target.value)} 
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('firstName', e.target.value)} 
           error={isFieldEmpty(formData.firstName)} 
           placeholder={t('profile.placeholders.firstName')} 
         />
         <Input 
           label={t('profile.fields.lastName')} 
           value={formData.lastName} 
-          onChange={(e) => handleInputChange('lastName', e.target.value)} 
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('lastName', e.target.value)} 
           error={isFieldEmpty(formData.lastName)} 
           placeholder={t('profile.placeholders.lastName')} 
         />
         <Input 
           label={t('profile.fields.displayName')} 
           value={formData.displayName} 
-          onChange={(e) => handleInputChange('displayName', e.target.value)} 
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('displayName', e.target.value)} 
           error={isFieldEmpty(formData.displayName)} 
           placeholder={t('profile.placeholders.displayName')} 
         />
@@ -189,7 +121,7 @@ export default function Profile({ onBack }: ProfileProps) {
           <label className="text-xs font-medium text-neutral-500 uppercase tracking-wider ml-1">{t('profile.fields.gender')}</label>
           <select 
             value={formData.gender}
-            onChange={(e) => handleInputChange('gender', e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleInputChange('gender', e.target.value)}
             className={`w-full px-4 py-2.5 rounded-xl bg-neutral-900/60 border ${isFieldEmpty(formData.gender) ? 'border-red-500/50 focus:border-red-500' : 'border-neutral-800/60 focus:border-emerald-500/50'} text-neutral-200 outline-none transition-all duration-200 appearance-none`}
           >
             <option value="" disabled>{t('profile.genderOptions.select')}</option>
@@ -201,7 +133,7 @@ export default function Profile({ onBack }: ProfileProps) {
         <Input 
           label={t('profile.fields.dob')} 
           value={formData.dob} 
-          onChange={(e) => handleInputChange('dob', e.target.value)} 
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('dob', e.target.value)} 
           error={isFieldEmpty(formData.dob)} 
           type="date" 
         />
@@ -211,14 +143,14 @@ export default function Profile({ onBack }: ProfileProps) {
         <Input 
           label={t('profile.fields.revolut')} 
           value={formData.revolutUser} 
-          onChange={(e) => handleInputChange('revolutUser', e.target.value)} 
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('revolutUser', e.target.value)} 
           error={isFieldEmpty(formData.revolutUser)} 
           placeholder={t('profile.placeholders.revolut')} 
         />
         <Input 
           label={t('profile.fields.discord')} 
           value={formData.discordId} 
-          onChange={(e) => handleInputChange('discordId', e.target.value)} 
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('discordId', e.target.value)} 
           error={isFieldEmpty(formData.discordId)} 
           placeholder={t('profile.placeholders.discord')} 
         />
@@ -228,7 +160,7 @@ export default function Profile({ onBack }: ProfileProps) {
       <div className="flex justify-end mb-12">
         <Button 
           onClick={handleSave}
-          isLoading={updateProfileMutation.isPending}
+          isLoading={isSaving}
           className="px-10"
         >
           {t('common.saveChanges')}

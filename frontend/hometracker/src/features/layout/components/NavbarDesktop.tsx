@@ -1,9 +1,10 @@
 import { User, LogOut, Languages, ChevronDown, Home, Settings, Check, Plus } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { NavbarProps } from './Navbar';
+import { useNavbarLogic } from '@/features/layout/hooks/useNavbarLogic';
 
 interface DesktopProps extends NavbarProps {
-  logic: ReturnType<typeof import('./useNavbarLogic').useNavbarLogic>;
+  logic: ReturnType<typeof useNavbarLogic>;
 }
 
 export const NavbarDesktop = ({ logic, ...props }: DesktopProps) => {

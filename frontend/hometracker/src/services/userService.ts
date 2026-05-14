@@ -1,3 +1,4 @@
+import { storageService } from './storageService';
 
 const API_BASE_URL = `http://${window.location.hostname}:8000/api`;
 
@@ -7,7 +8,7 @@ const getHeaders = (includeAuth = true) => {
     };
 
     if (includeAuth) {
-        const token = localStorage.getItem('token');
+        const token = storageService.getToken();
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
         }
@@ -27,7 +28,7 @@ export const userService = {
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail || "Login failed");
 
-        localStorage.setItem('token', data.access_token);
+        storageService.setToken(data.access_token);
 
         return data;
     },
@@ -51,7 +52,7 @@ export const userService = {
     },
 
     logout: () => {
-        localStorage.removeItem('token');
+        storageService.clearToken();
     },
 
     // --- PROFILE OPERATIONS ---
@@ -81,7 +82,7 @@ export const userService = {
         const formData = new FormData();
         formData.append('file', file);
 
-        const token = localStorage.getItem('token');
+        const token = storageService.getToken();
         const response = await fetch(`${API_BASE_URL}/users/me/avatar`, {
             method: 'POST',
             headers: {

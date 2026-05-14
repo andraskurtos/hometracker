@@ -1,5 +1,5 @@
-import { Card } from './ui/Card';
-import { type LaunchpadLogic } from './useLaunchpadLogic';
+import { Card } from '@/components/ui/Card';
+import { type LaunchpadLogic } from '@/features/layout/hooks/useLaunchpadLogic';
 
 interface LaunchpadDesktopProps {
   logic: LaunchpadLogic;
@@ -11,7 +11,7 @@ export const LaunchpadDesktop = ({ logic }: LaunchpadDesktopProps) => {
   return (
     <div className="w-full max-w-7xl mx-auto mt-12 flex justify-center px-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
-        {modules.map((mod) => {
+        {modules.map((mod: LaunchpadLogic['modules'][number]) => {
           const Icon = mod.icon;
           return (
             <Card

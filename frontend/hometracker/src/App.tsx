@@ -1,18 +1,25 @@
-import { useState, useEffect, useMemo, type JSX } from 'react';
+import { useEffect, useMemo, type JSX } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import Navbar from "./components/Navbar"
-import ReceiptSplitter from "./components/ReceiptSplitter"
-import Launchpad from "./components/Launchpad"
-import Login from "./components/Login"
-import Profile from "./components/Profile"
-import Landing from "./components/Landing"
-import HouseholdSetup from "./components/HouseholdSetup"
-import HouseholdManagement from "./components/HouseholdManagement"
-import { useMyHouseholds } from './hooks/useHouseholds';
-import { useProfile, useLogout } from './hooks/useProfile';
+
+// Layout & UI
+import Navbar from "./features/layout/components/Navbar"
 import { ReturnButton } from './components/ui/ReturnButton';
 import { Spinner } from './components/ui/Spinner';
+
+// Features
+import ReceiptSplitter from "./features/receipts/components/ReceiptSplitter"
+import Launchpad from "./features/layout/components/Launchpad"
+import Login from "./features/auth/components/Login"
+import Profile from "./features/profile/components/Profile"
+import Landing from "./features/auth/components/Landing"
+import HouseholdSetup from "./features/households/components/HouseholdSetup"
+import HouseholdManagement from "./features/households/components/HouseholdManagement"
+
+// Context & Hooks
+import { useAuth } from './features/auth/AuthContext';
+import { useMyHouseholds } from './features/households/hooks/useHouseholds';
+import { useState } from 'react';
 
 // --- Protected Route Wrapper ---
 const ProtectedRoute = ({ children, isAuthenticated }: { children: JSX.Element, isAuthenticated: boolean }) => {
@@ -24,12 +31,11 @@ const ProtectedRoute = ({ children, isAuthenticated }: { children: JSX.Element, 
 
 function App() {
   const { t } = useTranslation();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!localStorage.getItem('token'));
+  const { isAuthenticated, login, logout, userName, isLoading: isAuthLoading } = useAuth();
   const [activeHouseholdId, setActiveHouseholdId] = useState<string | null>(null);
   
   const navigate = useNavigate();
   const location = useLocation();
-  const logout = useLogout();
 
   // Queries
   const { 
@@ -37,13 +43,6 @@ function App() {
     isLoading: isLoadingHouseholds, 
     refetch: refetchHouseholds 
   } = useMyHouseholds(isAuthenticated);
-
-  const { data: profile } = useProfile(isAuthenticated);
-
-  const userName = useMemo(() => {
-    if (profile) return profile.display_name || `${profile.first_name} ${profile.last_name}`;
-    return localStorage.getItem('userName') || '';
-  }, [profile]);
 
   // Active household object
   const activeHousehold = useMemo(() => {
@@ -71,28 +70,7 @@ function App() {
     }
   }, [isAuthenticated, navigate, location.pathname]);
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setActiveHouseholdId(null);
-    localStorage.removeItem('userId'); // Clear userId on logout
-    logout();
-  };
-
-  const handleLoginSuccess = (token: string, userId: string, name: string) => {
-    localStorage.setItem('token', token);
-    localStorage.setItem('userId', userId);
-    localStorage.setItem('userName', name);
-    setIsAuthenticated(true);
-  };
-
-  // Sync userId from profile query if missing
-  useEffect(() => {
-    if (profile?.id && !localStorage.getItem('userId')) {
-      localStorage.setItem('userId', profile.id);
-    }
-  }, [profile]);
-
-  if (isAuthenticated && isLoadingHouseholds) {
+  if (isAuthLoading || (isAuthenticated && isLoadingHouseholds)) {
     return (
       <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
         <Spinner size="lg" />
@@ -105,7 +83,7 @@ function App() {
       <Navbar 
         isAuthenticated={isAuthenticated} 
         onProfileClick={() => navigate('/profile')} 
-        onLogout={handleLogout}
+        onLogout={logout}
         households={households}
         activeHousehold={activeHousehold}
         onSelectHousehold={(id) => {
@@ -124,11 +102,11 @@ function App() {
             } />
             
             <Route path="/login" element={
-              !isAuthenticated ? <Login onLoginSuccess={handleLoginSuccess} initialMode="login" /> : <Navigate to="/" />
+              !isAuthenticated ? <Login onLoginSuccess={login} initialMode="login" /> : <Navigate to="/" />
             } />
 
             <Route path="/register" element={
-              !isAuthenticated ? <Login onLoginSuccess={handleLoginSuccess} initialMode="register" /> : <Navigate to="/" />
+              !isAuthenticated ? <Login onLoginSuccess={login} initialMode="register" /> : <Navigate to="/" />
             } />
 
             {/* Protected Routes */}
@@ -184,7 +162,7 @@ function App() {
             <Route path="/profile" element={
               <ProtectedRoute isAuthenticated={isAuthenticated}>
                 <Profile 
-                  userName={userName} 
+                  userName={userName || ''} 
                   onBack={() => navigate('/')} 
                 />
               </ProtectedRoute>

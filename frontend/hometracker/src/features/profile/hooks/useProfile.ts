@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userService } from '../services/userService';
-import { queryKeys } from './queryKeys';
+import { userService } from '@/services/userService';
+import { queryKeys } from '@/features/shared/hooks/queryKeys';
 import { useNavigate } from 'react-router-dom';
 
 export const useProfile = (enabled: boolean = true) => {
