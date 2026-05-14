@@ -366,3 +366,59 @@ def get_receipt_debts(
             cur.close()
             conn.close()
 
+@router.delete("/{receipt_id}")
+def delete_receipt(
+    receipt_id: int,
+    user_id: str = Depends(get_current_user_id)
+):
+    """
+    Deletes a specific receipt and its associated items/owners.
+    Only the payee who is still a member of the household can delete it.
+    """
+    conn = None
+    cur = None
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # 1. Fetch receipt to check payee and household_id
+        cur.execute("SELECT payee, household_id FROM receipts WHERE id = %s", (receipt_id,))
+        receipt = cur.fetchone()
+        
+        if not receipt:
+            raise HTTPException(status_code=404, detail="Receipt not found")
+            
+        if receipt['payee'] != user_id:
+            raise HTTPException(status_code=403, detail="Access denied: Only the payee can delete this receipt")
+
+        # 2. Verify membership in the household
+        cur.execute("SELECT 1 FROM household_members WHERE household_id = %s AND user_id = %s AND is_active = TRUE", (receipt['household_id'], user_id))
+        if not cur.fetchone():
+            raise HTTPException(status_code=403, detail="Access denied: You are no longer a member of this household")
+
+        # 3. Delete associated records
+        # item_owners -> receipt_items -> receipts
+        cur.execute("SELECT id FROM receipt_items WHERE receipt_id = %s", (receipt_id,))
+        ri_ids = [row['id'] for row in cur.fetchall()]
+        
+        if ri_ids:
+            cur.execute("DELETE FROM item_owners WHERE receipt_item_id = ANY(%s)", (ri_ids,))
+            cur.execute("DELETE FROM receipt_items WHERE receipt_id = %s", (receipt_id,))
+            
+        cur.execute("DELETE FROM receipts WHERE id = %s", (receipt_id,))
+        
+        conn.commit()
+        return {"status": "success", "message": "Receipt deleted successfully"}
+
+    except HTTPException:
+        if conn: conn.rollback()
+        raise
+    except Exception as e:
+        if conn: conn.rollback()
+        logger.error(f"Error deleting receipt {receipt_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
+

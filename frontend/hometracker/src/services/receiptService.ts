@@ -193,5 +193,19 @@ export const receiptService = {
     }
 
     return await response.json();
+  },
+
+  deleteReceipt: async (receiptId: number) => {
+    const response = await fetch(`${API_BASE_URL}/${receiptId}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to delete receipt');
+    }
+
+    return await response.json();
   }
 };

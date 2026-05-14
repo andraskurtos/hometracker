@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useReceipts, useUploadReceipt } from './useReceipts';
+import { useReceipts, useUploadReceipt, useDeleteReceipt } from './useReceipts';
 import { useHouseholdMembers } from '../../households/hooks/useHouseholds';
 
 export const useReceiptSplitterLogic = (householdId: string | null) => {
@@ -15,6 +15,7 @@ export const useReceiptSplitterLogic = (householdId: string | null) => {
   
   const { data: members = [] } = useHouseholdMembers(householdId);
   const uploadMutation = useUploadReceipt(householdId);
+  const deleteMutation = useDeleteReceipt();
 
   // UI State
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
@@ -60,6 +61,15 @@ export const useReceiptSplitterLogic = (householdId: string | null) => {
     }
   };
 
+  const handleDeleteReceipt = async (receiptId: number) => {
+    if (!window.confirm(t('common.confirmDelete'))) return;
+    try {
+      await deleteMutation.mutateAsync(receiptId);
+    } catch (err) {
+      alert(t('groceries.errors.deleteFailed'));
+    }
+  };
+
   const openUploadModal = () => setIsModalOpen(true);
   const closeUploadModal = () => {
     if (!uploadMutation.isPending) {
@@ -74,6 +84,7 @@ export const useReceiptSplitterLogic = (householdId: string | null) => {
     members,
     isLoading: isLoadingReceipts,
     isUploading: uploadMutation.isPending,
+    isDeleting: deleteMutation.isPending,
     
     // Accordion
     expandedIds,
@@ -92,6 +103,7 @@ export const useReceiptSplitterLogic = (householdId: string | null) => {
     closeUploadModal,
     handleUpload,
     handleFileChange,
+    handleDeleteReceipt,
     
     // Utils
     refetch,

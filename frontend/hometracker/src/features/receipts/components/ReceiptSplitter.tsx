@@ -1,4 +1,4 @@
-import { ChevronDown, Plus, Upload, X, FileImage, Percent, Hash, Check } from 'lucide-react';
+import { ChevronDown, Plus, Upload, X, FileImage, Percent, Hash, Check, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { type UIItem } from '@/services/receiptService';
 import { Button } from '@/components/ui/Button';
@@ -249,6 +249,7 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps) {
     members,
     isLoading,
     isUploading,
+    isDeleting,
     expandedIds,
     closingReceiptIds,
     toggleAccordion,
@@ -261,9 +262,12 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps) {
     closeUploadModal,
     handleUpload,
     handleFileChange,
+    handleDeleteReceipt,
     refetch,
     t
   } = logic;
+
+  const currentUserId = storageService.getUserId();
 
   if (isLoading && serverReceipts.length === 0) {
     return (
@@ -301,7 +305,22 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps) {
                 </div>
                 <div className="flex items-center gap-6">
                   <p className="text-xl font-black text-emerald-400">{receipt.totalAmount.toLocaleString()}</p>
-                  <ChevronDown className={`text-neutral-600 transition-transform duration-300 ${expandedIds.has(receipt.id) && !closingReceiptIds.has(receipt.id) ? 'rotate-180' : ''}`} size={24} />
+                  <div className="flex items-center gap-2">
+                    {receipt.payee === currentUserId && (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteReceipt(receipt.id);
+                        }}
+                        disabled={isDeleting}
+                        className="p-2 rounded-xl text-neutral-600 hover:text-red-400 hover:bg-red-400/10 transition-all opacity-0 group-hover:opacity-100"
+                        title={t('common.confirmDelete')}
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
+                    <ChevronDown className={`text-neutral-600 transition-transform duration-300 ${expandedIds.has(receipt.id) && !closingReceiptIds.has(receipt.id) ? 'rotate-180' : ''}`} size={24} />
+                  </div>
                 </div>
               </div>
 

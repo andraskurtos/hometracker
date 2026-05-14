@@ -12,7 +12,8 @@
     "you": "Ön",
     "cancel": "Mégsem",
     "settle": "Rendezés",
-    "upload": "Feltöltés"
+    "upload": "Feltöltés",
+    "confirmDelete": "Biztosan törölni szeretné?"
   },
   "auth": {
     "signIn": "Bejelentkezés",
@@ -182,7 +183,8 @@
       "analyzing": "Elemzés AI segítségével..."
     },
     "errors": {
-      "uploadFailed": "A blokk feltöltése sikertelen. Ellenőrizze a konzolt a részletekért."
+      "uploadFailed": "A blokk feltöltése sikertelen. Ellenőrizze a konzolt a részletekért.",
+      "deleteFailed": "A blokk törlése sikertelen."
     }
   }
 }

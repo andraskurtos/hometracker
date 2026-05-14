@@ -32,6 +32,16 @@ export const useUpdateItemOwners = () => {
   });
 };
 
+export const useDeleteReceipt = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (receiptId: number) => receiptService.deleteReceipt(receiptId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.receipts.list() });
+    },
+  });
+};
+
 export const useReceiptDebts = (receiptId: number | null) => {
   return useQuery({
     queryKey: ['receipts', 'debts', receiptId],

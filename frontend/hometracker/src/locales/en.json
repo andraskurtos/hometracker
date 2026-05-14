@@ -12,7 +12,8 @@
     "you": "You",
     "cancel": "Cancel",
     "settle": "Settle",
-    "upload": "Upload"
+    "upload": "Upload",
+    "confirmDelete": "Are you sure you want to delete this?"
   },
   "auth": {
     "signIn": "Sign In",
@@ -183,7 +184,8 @@
       "analyzing": "Analyzing with AI..."
     },
     "errors": {
-      "uploadFailed": "Failed to upload receipt. Check console for details."
+      "uploadFailed": "Failed to upload receipt. Check console for details.",
+      "deleteFailed": "Failed to delete receipt."
     }
   }
 }
