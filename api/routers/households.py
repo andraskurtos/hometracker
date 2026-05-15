@@ -458,7 +458,7 @@ def mark_debt_as_pending(household_id: str, payee_id: str, user_id: str = Depend
 @router.patch("/{household_id}/reject-settlement/{debtor_id}")
 def reject_bulk_settlement(household_id: str, debtor_id: str, user_id: str = Depends(get_current_user_id)):
     """
-    Payee rejects a pending settlement, moving it back to 'unsettled'.
+    Payee rejects a pending settlement from a debtor.
     """
     conn = None
     cur = None
@@ -498,7 +498,7 @@ def reject_bulk_settlement(household_id: str, debtor_id: str, user_id: str = Dep
 @router.patch("/{household_id}/settle-bulk/{debtor_id}")
 def settle_bulk_debts(household_id: str, debtor_id: str, user_id: str = Depends(get_current_user_id)):
     """
-    Payee (user_id) confirms all pending/unsettled debts from a specific debtor in a household.
+    Payee confirms that a debtor has settled their debts.
     """
     conn = None
     cur = None
@@ -515,12 +515,12 @@ def settle_bulk_debts(household_id: str, debtor_id: str, user_id: str = Depends(
               AND r.household_id = %s
               AND r.payee = %s
               AND io.user_id = %s
-              AND io.settled != 'settled'
+              AND io.settled = 'pending'
             RETURNING io.id;
         """, (household_id, user_id, debtor_id))
         
         if not cur.fetchall():
-            raise HTTPException(status_code=404, detail="No unsettled or pending shares found for this user in this household")
+            raise HTTPException(status_code=404, detail="No pending shares found to settle")
             
         conn.commit()
         return {"status": "success", "message": "All items marked as settled"}

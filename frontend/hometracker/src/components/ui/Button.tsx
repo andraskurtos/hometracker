@@ -2,16 +2,19 @@ import React from 'react';
 import { Loader2 } from 'lucide-react';
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'neutral' | 'white' | 'emerald' | 'red';
+type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
+  size?: ButtonSize;
   isLoading?: boolean;
   icon?: React.ReactNode;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 export const Button = ({ 
   variant = 'primary', 
+  size = 'md',
   isLoading = false, 
   icon, 
   children, 
@@ -30,15 +33,23 @@ export const Button = ({
     red: 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/40 active:scale-[0.95]'
   };
 
+  const sizes = {
+    sm: 'px-4 py-1.5 text-xs',
+    md: 'px-6 py-2.5',
+    lg: 'px-8 py-3 text-lg',
+    icon: 'w-10 h-10 p-0'
+  };
+
   const isDisabled = disabled || isLoading;
 
   return (
     <button
       disabled={isDisabled}
       className={`
-        px-6 py-2.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2
-        disabled:opacity-50 disabled:cursor-not-allowed
+        rounded-xl font-bold transition-all flex items-center justify-center
+        disabled:opacity-50 disabled:cursor-not-allowed shrink-0
         ${variants[variant]}
+        ${sizes[size]}
         ${className}
       `}
       {...props}
@@ -46,10 +57,10 @@ export const Button = ({
       {isLoading ? (
         <Loader2 className="w-5 h-5 animate-spin" />
       ) : (
-        <>
+        <div className={`flex items-center justify-center ${children && icon ? 'gap-2' : ''}`}>
           {icon}
           {children}
-        </>
+        </div>
       )}
     </button>
   );

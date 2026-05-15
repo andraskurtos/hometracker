@@ -39,9 +39,7 @@ export const GlobalDebtSummary = ({ householdId, currency = 'HUF' }: GlobalDebtS
   };
 
   const handleSettle = (payeeId: string, username: string, amount: number) => {
-    // 1. Mark as pending
     markPending({ householdId, payeeId });
-    // 2. Open link
     window.open(getRevolutLink(username, amount), '_blank');
   };
 
@@ -53,12 +51,13 @@ export const GlobalDebtSummary = ({ householdId, currency = 'HUF' }: GlobalDebtS
     rejectSettlement({ householdId, debtorId });
   };
 
-  const hasDebts = summary?.debts && summary.debts.length > 0;
-  // ONLY display pending credits
   const pendingCredits = summary?.credits.filter(c => c.status === 'pending') || [];
-  const hasCredits = pendingCredits.length > 0;
+  const debts = summary?.debts || [];
 
-  if (!hasDebts && !hasCredits) return null;
+  const hasCredits = pendingCredits.length > 0;
+  const hasDebts = debts.length > 0;
+
+  if (!hasCredits && !hasDebts) return null;
 
   return (
     <div className="flex flex-col gap-8 mb-12 w-full max-w-4xl mx-auto">
@@ -102,22 +101,18 @@ export const GlobalDebtSummary = ({ householdId, currency = 'HUF' }: GlobalDebtS
                       <div className="flex items-center gap-2">
                         <Button 
                           variant="red" 
-                          size="sm" 
-                          className="h-10 w-10 !p-0 rounded-xl"
+                          size="icon"
                           onClick={() => handleRejectBulk(d.other_user_id)}
                           title={t('common.reject')}
-                        >
-                          <X size={20} />
-                        </Button>
+                          icon={<X size={20} className="-translate-y-[1px]" />}
+                        />
                         <Button 
                           variant="emerald" 
-                          size="sm" 
-                          className="h-10 w-10 !p-0 rounded-xl"
+                          size="icon"
                           onClick={() => handleConfirmBulk(d.other_user_id)}
                           title={t('common.confirm')}
-                        >
-                          <Check size={20} />
-                        </Button>
+                          icon={<Check size={20} />}
+                        />
                       </div>
                     </div>
                   </div>
@@ -133,7 +128,7 @@ export const GlobalDebtSummary = ({ householdId, currency = 'HUF' }: GlobalDebtS
         <div className="flex flex-col gap-4 animate-slide-down">
           <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500/70 ml-1">{t('groceries.debts.youOwe')}</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {summary.debts.map((d, idx) => {
+            {debts.map((d, idx) => {
               const member = getMember(d.other_user_id);
               if (!member) return null;
               const hasRevolut = !!member.revolut_username;
@@ -175,3 +170,5 @@ export const GlobalDebtSummary = ({ householdId, currency = 'HUF' }: GlobalDebtS
     </div>
   );
 };
+
+export default GlobalDebtSummary;
