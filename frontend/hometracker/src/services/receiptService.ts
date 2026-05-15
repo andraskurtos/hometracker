@@ -14,10 +14,12 @@ const getHeaders = () => {
 };
 
 // --- TYPES DECLARED IN BACKEND ---
+export type SettledStatus = 'unsettled' | 'pending' | 'settled';
+
 export interface BackendOwner {
   id: string;
   amount: number; 
-  settled: boolean;
+  settled: SettledStatus;
 }
 
 export interface BackendItem {
@@ -44,6 +46,7 @@ export interface BackendReceipt {
 export interface BackendDebtor {
   debtor: string;
   debtor_share: number;
+  status: SettledStatus;
 }
 
 export interface BackendDebts {
@@ -56,7 +59,7 @@ export interface BackendDebts {
 export interface UIOwner {
   userId: string;
   amount: number; 
-  settled: boolean;
+  settled: SettledStatus;
 }
 
 export interface UIItem {
@@ -133,7 +136,7 @@ export const receiptService = {
       // A receipt is settled if all non-payee owners are settled across ALL items
       // Check every owner of every item: if user != payee, they must be settled.
       const allOwnersSettled = items.every(item => 
-        item.owners.every(o => o.userId === receipt.payee || o.settled)
+        item.owners.every(o => o.userId === receipt.payee || o.settled === 'settled')
       );
 
       return {
@@ -221,6 +224,34 @@ export const receiptService = {
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.detail || 'Failed to update receipt item');
+    }
+
+    return await response.json();
+  },
+
+  markReceiptAsPending: async (receiptId: number) => {
+    const response = await fetch(`${API_BASE_URL}/${receiptId}/settle`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to mark as pending');
+    }
+
+    return await response.json();
+  },
+
+  confirmReceiptSettlement: async (receiptId: number, targetUserId: string) => {
+    const response = await fetch(`${API_BASE_URL}/${receiptId}/settle-confirm/${targetUserId}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to confirm settlement');
     }
 
     return await response.json();

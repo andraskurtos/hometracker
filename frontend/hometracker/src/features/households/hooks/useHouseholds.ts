@@ -18,6 +18,48 @@ export const useHouseholdMembers = (householdId: string | null) => {
   });
 };
 
+export const useFinancialSummary = (householdId: string | null) => {
+  return useQuery({
+    queryKey: [...queryKeys.households.list(), householdId, 'summary'],
+    queryFn: () => householdService.fetchFinancialSummary(householdId!),
+    enabled: !!householdId,
+  });
+};
+
+export const useSettleBulkDebts = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ householdId, debtorId }: { householdId: string; debtorId: string }) => 
+      householdService.settleBulkDebts(householdId, debtorId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.households.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.receipts.list() });
+    },
+  });
+};
+
+export const useMarkDebtAsPending = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ householdId, payeeId }: { householdId: string; payeeId: string }) => 
+      householdService.markDebtAsPending(householdId, payeeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.households.list() });
+    },
+  });
+};
+
+export const useRejectBulkSettlement = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ householdId, debtorId }: { householdId: string; debtorId: string }) => 
+      householdService.rejectBulkSettlement(householdId, debtorId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.households.list() });
+    },
+  });
+};
+
 export const useGrossDebts = (householdId: string | null, userId: string | null) => {
   return useQuery({
     queryKey: queryKeys.households.debts(householdId!, userId!),

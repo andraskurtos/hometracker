@@ -1,4 +1,4 @@
-import { ChevronDown, Plus, Upload, X, FileImage, Percent, Hash, Check, Trash2, AlertCircle, Pencil } from 'lucide-react';
+import { ChevronDown, Plus, Upload, X, FileImage, Percent, Hash, Check, Trash2, AlertCircle, Pencil, CreditCard } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { type UIItem } from '@/services/receiptService';
 import { Button } from '@/components/ui/Button';
@@ -22,7 +22,19 @@ interface ReceiptSplitterProps {
 }
 
 // --- SUB-COMPONENT: DEBT BREAKDOWN ---
-const DebtBreakdown = ({ receiptId, settled, members }: { receiptId: number, settled: boolean, members: HouseholdMember[] }) => {
+const DebtBreakdown = ({ 
+  receiptId, 
+  payeeId,
+  members,
+  onMarkPending,
+  onConfirmSettlement
+}: { 
+  receiptId: number, 
+  payeeId: string,
+  members: HouseholdMember[],
+  onMarkPending: (id: number) => void,
+  onConfirmSettlement: (rId: number, uId: string) => void
+}) => {
   const { t } = useTranslation();
   const { data: debts, isLoading } = useReceiptDebts(receiptId);
   const currentUserId = storageService.getUserId();
@@ -71,18 +83,49 @@ const DebtBreakdown = ({ receiptId, settled, members }: { receiptId: number, set
             label={t('groceries.debts.debtor')}
             value={d.debtor_share.toLocaleString()}
             description={getMember(d.debtor)?.display_name || getMember(d.debtor)?.first_name}
-            className={settled ? 'border-emerald-500/20' : 'border-red-500/10'}
+            className={
+              d.status === 'settled' ? 'border-emerald-500/20' : 
+              d.status === 'pending' ? 'border-amber-500/20' : 
+              'border-red-500/10'
+            }
             icon={
               <div className="flex items-center gap-2">
                 {d.debtor === currentUserId && (
                   <Badge variant="neutral" className="text-[9px] uppercase font-black px-1.5 py-0.5 opacity-50">{t('common.you')}</Badge>
                 )}
-                <Avatar 
-                  src={getMember(d.debtor)?.profile_pic_url} 
-                  firstName={getMember(d.debtor)?.first_name}
-                  lastName={getMember(d.debtor)?.last_name}
-                  size="sm"
-                />
+                {d.status === 'pending' && (
+                  <Badge variant="neutral" className="text-[9px] uppercase font-black px-1.5 py-0.5 bg-amber-500/10 text-amber-500 border-amber-500/20">{t('common.pending')}</Badge>
+                )}
+                <div className="flex items-center gap-1">
+                  {d.debtor === currentUserId && d.status === 'unsettled' && (
+                    <Button 
+                      variant="primary" 
+                      size="sm" 
+                      className="h-8 !px-3 !py-0 text-[9px] font-black uppercase tracking-tight"
+                      onClick={() => onMarkPending(receiptId)}
+                      icon={<CreditCard size={12} />}
+                    >
+                      {t('common.settle')}
+                    </Button>
+                  )}
+                  {payeeId === currentUserId && d.status !== 'settled' && (
+                    <Button 
+                      variant="emerald" 
+                      size="sm" 
+                      className="h-8 !px-3 !py-0 text-[9px] font-black uppercase tracking-tight"
+                      onClick={() => onConfirmSettlement(receiptId, d.debtor)}
+                      icon={<Check size={12} />}
+                    >
+                      {t('common.confirm')}
+                    </Button>
+                  )}
+                  <Avatar 
+                    src={getMember(d.debtor)?.profile_pic_url} 
+                    firstName={getMember(d.debtor)?.first_name}
+                    lastName={getMember(d.debtor)?.last_name}
+                    size="sm"
+                  />
+                </div>
               </div>
             }
           />
@@ -193,6 +236,7 @@ const ItemRow = ({
   householdId: string,
   refetch: () => void
 }) => {
+  const { t } = useTranslation();
   const rowAnchorRef = useRef<HTMLDivElement>(null);
   const currentUserId = storageService.getUserId();
   const { mutate: updateItem } = useUpdateReceiptItem();
@@ -200,9 +244,10 @@ const ItemRow = ({
   const [editValue, setEditValue] = useState<string>('');
 
   const isPayee = receipt.payee === currentUserId;
+  const isLocked = item.owners.some(o => o.settled !== 'unsettled');
 
   const startEditing = (field: string, value: any) => {
-    if (!isPayee) return;
+    if (!isPayee || isLocked) return;
     setEditingField(field);
     setEditValue(value.toString());
   };
@@ -259,7 +304,7 @@ const ItemRow = ({
         ) : (
           <div className="flex items-center gap-2">
             <span>{item.name}</span>
-            {isPayee && (
+            {isPayee && !isLocked && (
               <Pencil 
                 size={12} 
                 className="opacity-0 group-hover/name:opacity-50 cursor-pointer hover:!opacity-100 transition-opacity" 
@@ -286,7 +331,7 @@ const ItemRow = ({
             ) : (
               <>
                 <span>{item.qty}</span>
-                {isPayee && (
+                {isPayee && !isLocked && (
                   <Pencil 
                     size={10} 
                     className="opacity-0 group-hover/qty:opacity-50 cursor-pointer hover:!opacity-100 transition-opacity" 
@@ -311,7 +356,7 @@ const ItemRow = ({
             ) : (
               <>
                 <span className="text-[10px] opacity-60 ml-0.5">{item.size !== '-' ? item.size : ''}</span>
-                {isPayee && (
+                {isPayee && !isLocked && (
                   <Pencil 
                     size={10} 
                     className="opacity-0 group-hover/size:opacity-50 cursor-pointer hover:!opacity-100 transition-opacity" 
@@ -324,28 +369,38 @@ const ItemRow = ({
         </div>
       </td>
       <td className="py-4 relative">
-        <div 
-          ref={rowAnchorRef}
-          onClick={() => {
-            if (receipt.payee == currentUserId) {
-              setActiveSplitId({ receiptId: receipt.id, itemId: item.id });
-            }
-          }} 
-          className={`flex items-center justify-center -space-x-3 group/stack ${receipt.payee == currentUserId ? 'cursor-pointer' : 'cursor-default'}`}
-        >
-          {members.filter((m: HouseholdMember) => item.owners.some((o: any) => o.userId === m.id)).slice(0, 3).map((member: HouseholdMember, idx: number) => (
-            <Avatar 
-              key={member.id}
-              src={member.profile_pic_url}
-              firstName={member.first_name}
-              lastName={member.last_name}
-              size="sm"
-              className="ring-2 ring-neutral-900 group-hover/stack:translate-x-1 transition-transform"
-              style={{ zIndex: 10 - idx }}
-            />
-          ))}
-          {item.owners.length > 3 && <div className="w-8 h-8 rounded-full border-2 border-neutral-900 bg-neutral-800 flex items-center justify-center text-[10px] font-bold text-neutral-400 relative z-0 transition-transform group-hover/stack:translate-x-1">+{item.owners.length - 3}</div>}
-          {item.owners.length === 0 && <div className="w-8 h-8 rounded-full border-2 border-dashed border-neutral-800 flex items-center justify-center text-neutral-600"><Plus size={14} /></div>}
+        <div className="group/lock relative">
+          <div 
+            ref={rowAnchorRef}
+            onClick={() => {
+              if (receipt.payee == currentUserId && !isLocked) {
+                setActiveSplitId({ receiptId: receipt.id, itemId: item.id });
+              }
+            }} 
+            className={`flex items-center justify-center -space-x-3 group/stack ${receipt.payee == currentUserId && !isLocked ? 'cursor-pointer' : 'cursor-default'} ${isLocked ? 'grayscale opacity-40' : ''}`}
+          >
+            {members.filter((m: HouseholdMember) => item.owners.some((o: any) => o.userId === m.id)).slice(0, 3).map((member: HouseholdMember, idx: number) => (
+              <Avatar 
+                key={member.id}
+                src={member.profile_pic_url}
+                firstName={member.first_name}
+                lastName={member.last_name}
+                size="sm"
+                className="ring-2 ring-neutral-900 group-hover/stack:translate-x-1 transition-transform"
+                style={{ zIndex: 10 - idx }}
+              />
+            ))}
+            {item.owners.length > 3 && <div className="w-8 h-8 rounded-full border-2 border-neutral-900 bg-neutral-800 flex items-center justify-center text-[10px] font-bold text-neutral-400 relative z-0 transition-transform group-hover/stack:translate-x-1">+{item.owners.length - 3}</div>}
+            {item.owners.length === 0 && <div className="w-8 h-8 rounded-full border-2 border-dashed border-neutral-800 flex items-center justify-center text-neutral-600"><Plus size={14} /></div>}
+          </div>
+
+          {isLocked && (
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl opacity-0 pointer-events-none group-hover/lock:opacity-100 transition-opacity z-50">
+              <p className="text-[10px] text-neutral-400 leading-relaxed font-medium text-center">
+                {t('groceries.warnings.itemLocked')}
+              </p>
+            </div>
+          )}
         </div>
 
         {activeSplitId?.itemId === item.id && activeSplitId?.receiptId === receipt.id && (
@@ -374,7 +429,7 @@ const ItemRow = ({
         ) : (
           <div className="flex items-center justify-end gap-2">
             <span>{(item.qty * item.price).toLocaleString()}</span>
-            {isPayee && (
+            {isPayee && !isLocked && (
               <Pencil 
                 size={12} 
                 className="opacity-0 group-hover/price:opacity-50 cursor-pointer hover:!opacity-100 transition-opacity" 
@@ -411,6 +466,8 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps) {
     handleUpload,
     handleFileChange,
     handleDeleteReceipt,
+    handleMarkAsPending,
+    handleConfirmSettlement,
     refetch,
     t
   } = logic;
@@ -474,7 +531,13 @@ export default function ReceiptSplitter({ householdId }: ReceiptSplitterProps) {
                 <div className={`border-t border-neutral-800/60 p-6 bg-neutral-950/30 overflow-hidden ${closingReceiptIds.has(receipt.id) ? 'animate-slide-up' : 'animate-slide-down'}`}>
                   <div className="overflow-x-auto overflow-visible">
                     
-                    <DebtBreakdown receiptId={receipt.id} settled={receipt.settled} members={members} />
+                    <DebtBreakdown 
+                      receiptId={receipt.id} 
+                      payeeId={receipt.payee} 
+                      members={members} 
+                      onMarkPending={handleMarkAsPending}
+                      onConfirmSettlement={handleConfirmSettlement}
+                    />
 
                     {(() => {
                       const sumOfItems = receipt.items.reduce((sum: number, item: any) => sum + (item.qty * item.price), 0);

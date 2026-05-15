@@ -13,7 +13,10 @@
     "cancel": "Mégsem",
     "settle": "Rendezés",
     "upload": "Feltöltés",
-    "confirmDelete": "Biztosan törölni szeretné?"
+    "confirmDelete": "Biztosan törölni szeretné?",
+    "pending": "Folyamatban",
+    "confirm": "Megerősítés",
+    "reject": "Elutasítás"
   },
   "auth": {
     "signIn": "Bejelentkezés",
@@ -169,6 +172,8 @@
       "calculating": "Tartozások számítása...",
       "calculatingGlobal": "Háztartási tartozások számítása...",
       "youOwe": "Tartozásai",
+      "youAreOwed": "Tartozások Önnek",
+      "confirmSettlementPrompt": "{{user}} rendezést küldött Önnek. Erősítse meg a fizetés beérkezését vagy utasítsa el.",
       "payee": "Kedvezményezett",
       "debtor": "Adós",
       "grossDebt": "Bruttó tartozás",
@@ -184,12 +189,15 @@
     },
     "errors": {
       "uploadFailed": "A blokk feltöltése sikertelen. Ellenőrizze a konzolt a részletekért.",
-      "deleteFailed": "A blokk törlése sikertelen."
+      "deleteFailed": "A blokk törlése sikertelen.",
+      "settleFailed": "A rendezés megjelölése sikertelen.",
+      "confirmFailed": "A rendezés megerősítése sikertelen."
     },
     "warnings": {
       "parsingMismatch": "Az AI feldolgozás során hiba történhetett. Kérjük, próbálja meg újra a feldolgozást vagy módosítsa a hibás tételeket. {{amount}} {{currency}} {{type}} mutatkozik.",
       "missing": "hiány",
-      "surplus": "többlet"
+      "surplus": "többlet",
+      "itemLocked": "Ez a tétel zárolva van, mert egy elszámolás már elindult vagy befejeződött. Nem módosítható és nem osztható újra."
     }
   }
 }

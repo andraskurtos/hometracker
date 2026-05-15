@@ -1,7 +1,7 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
 
-type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'neutral' | 'white';
+type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'neutral' | 'white' | 'emerald' | 'red';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -25,7 +25,9 @@ export const Button = ({
     danger: 'bg-red-500 text-white hover:bg-red-400 shadow-[0_0_15px_rgba(239,68,68,0.3)] active:scale-[0.98]',
     ghost: 'bg-transparent text-neutral-400 hover:text-neutral-200 hover:bg-white/5',
     neutral: 'bg-neutral-800 text-neutral-200 hover:bg-neutral-700',
-    white: 'bg-neutral-100 text-neutral-950 hover:scale-105 shadow-[0_0_40px_rgba(255,255,255,0.1)] active:scale-95'
+    white: 'bg-neutral-100 text-neutral-950 hover:scale-105 shadow-[0_0_40px_rgba(255,255,255,0.1)] active:scale-95',
+    emerald: 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 hover:border-emerald-500/40 active:scale-[0.95]',
+    red: 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/40 active:scale-[0.95]'
   };
 
   const isDisabled = disabled || isLoading;

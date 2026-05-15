@@ -1,3 +1,5 @@
+import { type SettledStatus } from './receiptService';
+
 const API_BASE_URL = `http://${window.location.hostname}:8000/api`;
 
 const getHeaders = (includeAuth = true) => {
@@ -44,11 +46,52 @@ export interface HouseholdUpdate {
 }
 
 export interface GrossDebt {
-    payee: string;
+    other_user_id: string;
     amount: number;
+    status: SettledStatus;
+}
+
+export interface FinancialSummary {
+    debts: GrossDebt[];
+    credits: GrossDebt[];
 }
 
 export const householdService = {
+    fetchFinancialSummary: async (householdId: string): Promise<FinancialSummary> => {
+        const response = await fetch(`${API_BASE_URL}/household/${householdId}/summary`, {
+            headers: getHeaders(),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Failed to fetch summary");
+        return data.data;
+    },
+    settleBulkDebts: async (householdId: string, debtorId: string) => {
+        const response = await fetch(`${API_BASE_URL}/household/${householdId}/settle-bulk/${debtorId}`, {
+            method: 'PATCH',
+            headers: getHeaders(),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Failed to settle debts");
+        return data;
+    },
+    markDebtAsPending: async (householdId: string, payeeId: string) => {
+        const response = await fetch(`${API_BASE_URL}/household/${householdId}/mark-pending/${payeeId}`, {
+            method: 'PATCH',
+            headers: getHeaders(),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Failed to mark as pending");
+        return data;
+    },
+    rejectBulkSettlement: async (householdId: string, debtorId: string) => {
+        const response = await fetch(`${API_BASE_URL}/household/${householdId}/reject-settlement/${debtorId}`, {
+            method: 'PATCH',
+            headers: getHeaders(),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Failed to reject settlement");
+        return data;
+    },
     fetchGrossDebts: async (householdId: string, userId: string): Promise<GrossDebt[]> => {
         const response = await fetch(`${API_BASE_URL}/household/${householdId}/debts/${userId}`, {
             headers: getHeaders(),

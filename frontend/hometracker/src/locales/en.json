@@ -13,7 +13,10 @@
     "cancel": "Cancel",
     "settle": "Settle",
     "upload": "Upload",
-    "confirmDelete": "Are you sure you want to delete this?"
+    "confirmDelete": "Are you sure you want to delete this?",
+    "pending": "Pending",
+    "confirm": "Confirm",
+    "reject": "Reject"
   },
   "auth": {
     "signIn": "Sign In",
@@ -170,6 +173,8 @@
       "calculating": "Calculating Debts...",
       "calculatingGlobal": "Calculating Household Debts...",
       "youOwe": "You Owe",
+      "youAreOwed": "Who Owes You",
+      "confirmSettlementPrompt": "{{user}} sent you a settlement. Confirm that the payment arrived or reject payment.",
       "payee": "Payee",
       "debtor": "Debtor",
       "grossDebt": "Gross Debt",
@@ -185,12 +190,15 @@
     },
     "errors": {
       "uploadFailed": "Failed to upload receipt. Check console for details.",
-      "deleteFailed": "Failed to delete receipt."
+      "deleteFailed": "Failed to delete receipt.",
+      "settleFailed": "Failed to mark as pending.",
+      "confirmFailed": "Failed to confirm settlement."
     },
     "warnings": {
       "parsingMismatch": "AI parsing may have gone wrong. Please try either reparsing or modifying wrong entries. We are {{type}} of {{amount}} {{currency}}",
       "missing": "missing",
-      "surplus": "in surplus"
+      "surplus": "in surplus",
+      "itemLocked": "This item is locked because a settlement has already been initiated or confirmed. You cannot re-split or modify it."
     }
   }
 }

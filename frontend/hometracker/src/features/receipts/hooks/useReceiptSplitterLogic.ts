@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useReceipts, useUploadReceipt, useDeleteReceipt } from './useReceipts';
+import { useReceipts, useUploadReceipt, useDeleteReceipt, useMarkAsPending, useConfirmSettlement } from './useReceipts';
 import { useHouseholdMembers, useMyHouseholds } from '../../households/hooks/useHouseholds';
 
 export const useReceiptSplitterLogic = (householdId: string | null) => {
@@ -19,6 +19,8 @@ export const useReceiptSplitterLogic = (householdId: string | null) => {
   
   const uploadMutation = useUploadReceipt(householdId);
   const deleteMutation = useDeleteReceipt();
+  const markAsPendingMutation = useMarkAsPending();
+  const confirmSettlementMutation = useConfirmSettlement();
 
   // UI State
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
@@ -73,6 +75,22 @@ export const useReceiptSplitterLogic = (householdId: string | null) => {
     }
   };
 
+  const handleMarkAsPending = async (receiptId: number) => {
+    try {
+      await markAsPendingMutation.mutateAsync(receiptId);
+    } catch (err) {
+      alert(t('groceries.errors.settleFailed'));
+    }
+  };
+
+  const handleConfirmSettlement = async (receiptId: number, targetUserId: string) => {
+    try {
+      await confirmSettlementMutation.mutateAsync({ receiptId, targetUserId });
+    } catch (err) {
+      alert(t('groceries.errors.confirmFailed'));
+    }
+  };
+
   const openUploadModal = () => setIsModalOpen(true);
   const closeUploadModal = () => {
     if (!uploadMutation.isPending) {
@@ -108,6 +126,8 @@ export const useReceiptSplitterLogic = (householdId: string | null) => {
     handleUpload,
     handleFileChange,
     handleDeleteReceipt,
+    handleMarkAsPending,
+    handleConfirmSettlement,
     
     // Utils
     refetch,

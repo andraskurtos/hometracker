@@ -268,6 +268,11 @@ def update_item_owners(
         if receipt['payee'] != user_id:
             raise HTTPException(status_code=403, detail="Access denied: Only the payee can modify splitting")
 
+        # 1.5 Strict Lock: Verify if any existing owners are already 'pending' or 'settled'
+        cur.execute("SELECT 1 FROM item_owners WHERE receipt_item_id = %s AND settled != 'unsettled'", (receipt_item_id,))
+        if cur.fetchone():
+            raise HTTPException(status_code=403, detail="Strict Lock: This item cannot be re-split as a settlement has already been initiated or completed.")
+
         # 2. Verify that the receipt_item actually belongs to the receipt and get its total price
         cur.execute("SELECT quantity, price_paid FROM receipt_items WHERE id = %s AND receipt_id = %s", (receipt_item_id, receipt_id))
         ri = cur.fetchone()
@@ -337,10 +342,15 @@ def get_receipt_debts(
         cur.execute("""
             SELECT 
                 io.user_id,
-                SUM(io.amount) as total_share
+                SUM(io.amount) as total_share,
+                CASE 
+                    WHEN 'unsettled' = ANY(ARRAY_AGG(io.settled)) THEN 'unsettled'
+                    WHEN 'pending' = ANY(ARRAY_AGG(io.settled)) THEN 'pending'
+                    ELSE 'settled'
+                END as status
             FROM receipt_items ri
             JOIN item_owners io ON ri.id = io.receipt_item_id
-            WHERE ri.receipt_id = %s AND io.settled = FALSE
+            WHERE ri.receipt_id = %s
             GROUP BY io.user_id;
         """, (receipt_id,))
         
@@ -352,13 +362,15 @@ def get_receipt_debts(
         for s in shares:
             u_id = s['user_id']
             u_share = float(s['total_share'])
+            u_status = s['status']
             
             if u_id == payee_id:
                 payee_share = u_share
             else:
                 debtors.append({
                     "debtor": u_id,
-                    "debtor_share": u_share
+                    "debtor_share": u_share,
+                    "status": u_status
                 })
 
         return {
@@ -402,6 +414,11 @@ def update_receipt_item(
             raise HTTPException(status_code=404, detail="Receipt not found")
         if receipt['payee'] != user_id:
             raise HTTPException(status_code=403, detail="Access denied: Only the payee can modify receipt items")
+
+        # 1.5 Strict Lock: Verify if any existing owners are already 'pending' or 'settled'
+        cur.execute("SELECT 1 FROM item_owners WHERE receipt_item_id = %s AND settled != 'unsettled'", (receipt_item_id,))
+        if cur.fetchone():
+            raise HTTPException(status_code=403, detail="Strict Lock: This item cannot be modified as a settlement has already been initiated or completed.")
 
         # 2. Verify membership
         cur.execute("SELECT 1 FROM household_members WHERE household_id = %s AND user_id = %s AND is_active = TRUE", (receipt['household_id'], user_id))
@@ -472,6 +489,99 @@ def update_receipt_item(
         if conn: conn.rollback()
         logger.error(f"Error updating receipt item {receipt_item_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
+
+@router.patch("/{receipt_id}/settle")
+def mark_receipt_as_pending(
+    receipt_id: int,
+    user_id: str = Depends(get_current_user_id)
+):
+    """
+    Marks the current user's shares in a receipt as 'pending'.
+    """
+    conn = None
+    cur = None
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        
+        cur.execute("""
+            UPDATE item_owners io
+            SET settled = 'pending'
+            FROM receipt_items ri
+            WHERE io.receipt_item_id = ri.id
+              AND ri.receipt_id = %s
+              AND io.user_id = %s
+              AND io.settled = 'unsettled'
+            RETURNING io.id;
+        """, (receipt_id, user_id))
+        
+        if not cur.fetchall():
+            raise HTTPException(status_code=404, detail="No unsettled shares found for this user in this receipt")
+            
+        conn.commit()
+        return {"status": "success", "message": "Shares marked as pending"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        if conn: conn.rollback()
+        logger.error(f"Error marking receipt {receipt_id} as pending for user {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
+
+@router.patch("/{receipt_id}/settle-confirm/{target_user_id}")
+def confirm_receipt_settlement(
+    receipt_id: int,
+    target_user_id: str,
+    user_id: str = Depends(get_current_user_id)
+):
+    """
+    Confirms a user's shares in a receipt as 'settled'.
+    Only the payee of the receipt can do this.
+    """
+    conn = None
+    cur = None
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        
+        # 1. Verify user is payee
+        cur.execute("SELECT payee FROM receipts WHERE id = %s", (receipt_id,))
+        receipt = cur.fetchone()
+        if not receipt:
+            raise HTTPException(status_code=404, detail="Receipt not found")
+        if receipt[0] != user_id:
+            raise HTTPException(status_code=403, detail="Only the payee can confirm settlement")
+            
+        # 2. Update target user's shares to 'settled'
+        cur.execute("""
+            UPDATE item_owners io
+            SET settled = 'settled'
+            FROM receipt_items ri
+            WHERE io.receipt_item_id = ri.id
+              AND ri.receipt_id = %s
+              AND io.user_id = %s
+              AND io.settled != 'settled'
+            RETURNING io.id;
+        """, (receipt_id, target_user_id))
+        
+        if not cur.fetchall():
+            raise HTTPException(status_code=404, detail="No unsettled or pending shares found for this user in this receipt")
+            
+        conn.commit()
+        return {"status": "success", "message": "Shares marked as settled"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        if conn: conn.rollback()
+        logger.error(f"Error confirming settlement for receipt {receipt_id}, user {target_user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
     finally:
         if conn:
             cur.close()

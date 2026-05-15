@@ -53,6 +53,29 @@ export const useUpdateReceiptItem = () => {
   });
 };
 
+export const useMarkAsPending = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (receiptId: number) => receiptService.markReceiptAsPending(receiptId),
+    onSuccess: (_, receiptId) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.receipts.list() });
+      queryClient.invalidateQueries({ queryKey: ['receipts', 'debts', receiptId] });
+    },
+  });
+};
+
+export const useConfirmSettlement = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ receiptId, targetUserId }: { receiptId: number; targetUserId: string }) => 
+      receiptService.confirmReceiptSettlement(receiptId, targetUserId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.receipts.list() });
+      queryClient.invalidateQueries({ queryKey: ['receipts', 'debts', variables.receiptId] });
+    },
+  });
+};
+
 export const useReceiptDebts = (receiptId: number | null) => {
   return useQuery({
     queryKey: ['receipts', 'debts', receiptId],

@@ -348,6 +348,193 @@ def deactivate_household(household_id: str, user_id: str = Depends(get_current_u
         if cur: cur.close()
         if conn: conn.close()
         
+@router.get("/{household_id}/summary")
+def get_household_financial_summary(household_id: str, user_id: str = Depends(get_current_user_id)):
+    """
+    Returns a summary of who the user owes and who owes the user in a household.
+    Includes aggregated status (unsettled, pending, settled).
+    """
+    conn = None
+    cur = None
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cur.execute("SELECT 1 FROM household_members WHERE household_id = %s AND user_id = %s AND is_active = TRUE;", (household_id, user_id))
+        if not cur.fetchone():
+            raise HTTPException(status_code=403, detail="You are not a member of this household") 
+
+        # 1. Debts: Who YOU owe
+        cur.execute("""
+            SELECT 
+                r.payee as other_user_id, 
+                SUM(io.amount)::FLOAT as amount,
+                CASE 
+                    WHEN 'unsettled' = ANY(ARRAY_AGG(io.settled)) THEN 'unsettled'
+                    WHEN 'pending' = ANY(ARRAY_AGG(io.settled)) THEN 'pending'
+                    ELSE 'settled'
+                END as status
+            FROM receipts r
+            JOIN receipt_items ri ON ri.receipt_id = r.id
+            JOIN item_owners io ON io.receipt_item_id = ri.id
+            WHERE r.household_id = %s AND io.user_id = %s AND io.user_id != r.payee AND io.settled != 'settled'
+            GROUP BY r.payee;
+        """, (household_id, user_id))
+        debts = cur.fetchall()
+
+        # 2. Credits: Who owes YOU
+        cur.execute("""
+            SELECT 
+                io.user_id as other_user_id, 
+                SUM(io.amount)::FLOAT as amount,
+                CASE 
+                    WHEN 'unsettled' = ANY(ARRAY_AGG(io.settled)) THEN 'unsettled'
+                    WHEN 'pending' = ANY(ARRAY_AGG(io.settled)) THEN 'pending'
+                    ELSE 'settled'
+                END as status
+            FROM receipts r
+            JOIN receipt_items ri ON ri.receipt_id = r.id
+            JOIN item_owners io ON io.receipt_item_id = ri.id
+            WHERE r.household_id = %s AND r.payee = %s AND io.user_id != r.payee AND io.settled != 'settled'
+            GROUP BY io.user_id;
+        """, (household_id, user_id))
+        credits = cur.fetchall()
+        
+        return {
+            "status": "success", 
+            "data": {
+                "debts": debts,
+                "credits": credits
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error fetching financial summary: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
+
+@router.patch("/{household_id}/mark-pending/{payee_id}")
+def mark_debt_as_pending(household_id: str, payee_id: str, user_id: str = Depends(get_current_user_id)):
+    """
+    Debtor marks all their unsettled debts to a specific payee as 'pending'.
+    """
+    conn = None
+    cur = None
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        
+        cur.execute("""
+            UPDATE item_owners io
+            SET settled = 'pending'
+            FROM receipt_items ri
+            JOIN receipts r ON ri.receipt_id = r.id
+            WHERE io.receipt_item_id = ri.id
+              AND r.household_id = %s
+              AND r.payee = %s
+              AND io.user_id = %s
+              AND io.settled = 'unsettled'
+            RETURNING io.id;
+        """, (household_id, payee_id, user_id))
+        
+        if not cur.fetchall():
+            raise HTTPException(status_code=404, detail="No unsettled shares found to mark as pending")
+            
+        conn.commit()
+        return {"status": "success", "message": "Debt marked as pending"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        if conn: conn.rollback()
+        logger.error(f"Error marking debt as pending: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
+
+@router.patch("/{household_id}/reject-settlement/{debtor_id}")
+def reject_bulk_settlement(household_id: str, debtor_id: str, user_id: str = Depends(get_current_user_id)):
+    """
+    Payee rejects a pending settlement, moving it back to 'unsettled'.
+    """
+    conn = None
+    cur = None
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        
+        cur.execute("""
+            UPDATE item_owners io
+            SET settled = 'unsettled'
+            FROM receipt_items ri
+            JOIN receipts r ON ri.receipt_id = r.id
+            WHERE io.receipt_item_id = ri.id
+              AND r.household_id = %s
+              AND r.payee = %s
+              AND io.user_id = %s
+              AND io.settled = 'pending'
+            RETURNING io.id;
+        """, (household_id, user_id, debtor_id))
+        
+        if not cur.fetchall():
+            raise HTTPException(status_code=404, detail="No pending shares found to reject")
+            
+        conn.commit()
+        return {"status": "success", "message": "Settlement rejected"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        if conn: conn.rollback()
+        logger.error(f"Error rejecting settlement: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
+
+@router.patch("/{household_id}/settle-bulk/{debtor_id}")
+def settle_bulk_debts(household_id: str, debtor_id: str, user_id: str = Depends(get_current_user_id)):
+    """
+    Payee (user_id) confirms all pending/unsettled debts from a specific debtor in a household.
+    """
+    conn = None
+    cur = None
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        
+        cur.execute("""
+            UPDATE item_owners io
+            SET settled = 'settled'
+            FROM receipt_items ri
+            JOIN receipts r ON ri.receipt_id = r.id
+            WHERE io.receipt_item_id = ri.id
+              AND r.household_id = %s
+              AND r.payee = %s
+              AND io.user_id = %s
+              AND io.settled != 'settled'
+            RETURNING io.id;
+        """, (household_id, user_id, debtor_id))
+        
+        if not cur.fetchall():
+            raise HTTPException(status_code=404, detail="No unsettled or pending shares found for this user in this household")
+            
+        conn.commit()
+        return {"status": "success", "message": "All items marked as settled"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        if conn: conn.rollback()
+        logger.error(f"Error bulk settling debts: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
+
 @router.get("/{household_id}/debts/{target_user_id}")
 def get_user_debts(household_id: str, target_user_id: str, user_id: str = Depends(get_current_user_id)):
     
@@ -371,7 +558,7 @@ def get_user_debts(household_id: str, target_user_id: str, user_id: str = Depend
                         FROM receipts r
                         JOIN receipt_items ri ON ri.receipt_id = r.id
                         JOIN item_owners io ON io.receipt_item_id = ri.id
-                        WHERE r.household_id = %s AND io.user_id = %s AND io.user_id != r.payee AND io.settled = FALSE
+                        WHERE r.household_id = %s AND io.user_id = %s AND io.user_id != r.payee AND io.settled != 'settled'
                         GROUP BY r.payee;
                     """, (household_id, target_user_id))
         
