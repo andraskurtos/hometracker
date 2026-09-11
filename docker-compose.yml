@@ -35,6 +35,9 @@ services:
       LLM_MODEL: ${LLM_MODEL}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       UPLOAD_DIR: /app/uploads/avatars
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_SUBJECT: ${VAPID_SUBJECT}
     volumes:
       # Uploaded avatars persist on the host.
       - ./api/uploads:/app/uploads
@@ -53,6 +56,13 @@ services:
     restart: unless-stopped
     ports:
       - "${WEB_PORT:-80}:80"
+      # --- HTTPS / SSL Configuration (Optional) ---
+      # Uncomment the port and volumes below (and in frontend/hometracker/nginx.conf)
+      # to enable HTTPS. This is required by browsers for push notifications to work.
+      # - "443:443"
+    # volumes:
+      # - ./cert.pem:/etc/nginx/ssl/cert.pem:ro
+      # - ./key.pem:/etc/nginx/ssl/key.pem:ro
     depends_on:
       api:
         condition: service_healthy
