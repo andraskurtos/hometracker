@@ -44,11 +44,33 @@ def init_database(reset: bool = False):
                 logger.warning("--reset: dropping and recreating the 'public' schema (all data destroyed)")
                 cur.execute("DROP SCHEMA IF EXISTS public CASCADE;")
                 cur.execute("CREATE SCHEMA public;")
+                logger.info("Applying schema.sql...")
+                cur.execute(load_schema_sql())
+                logger.info("Database initialized from schema.sql")
+            else:
+                logger.info("Idempotently applying schema.sql (ignoring 'already exists' errors)...")
+                raw_sql = load_schema_sql()
+                # pg_dump statements end with semicolons at the end of the line
+                statements = [stmt.strip() for stmt in raw_sql.split(";\n") if stmt.strip()]
+                
+                applied = 0
+                skipped = 0
+                
+                for stmt in statements:
+                    try:
+                        cur.execute(stmt + ";")
+                        applied += 1
+                    except psycopg2.Error as e:
+                        msg = str(e).lower()
+                        # Ignore errors for things that already exist
+                        if "already exists" in msg or "multiple primary keys" in msg or "empty query" in msg:
+                            skipped += 1
+                        else:
+                            logger.error(f"Failed to execute statement: {stmt[:100]}...\nError: {e}")
+                            raise
+                
+                logger.info(f"Database schema synced. {applied} new statements applied, {skipped} skipped.")
 
-            logger.info("Applying schema.sql...")
-            cur.execute(load_schema_sql())
-
-        logger.info("Database initialized from schema.sql")
     except Exception as e:
         logger.error(f"Database init failed: {e}")
         raise
