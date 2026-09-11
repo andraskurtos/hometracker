@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from routers import receipts, auth, users, households
+from routers import receipts, auth, users, households, push
 from config import logger
 
 
@@ -34,6 +34,7 @@ app.include_router(receipts.router)
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(households.router)
+app.include_router(push.router)
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 

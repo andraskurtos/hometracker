@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import mkcert from 'vite-plugin-mkcert'
 import path from 'path'
 
 // Where the dev server proxies API/upload requests. Override with
@@ -13,8 +14,13 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    mkcert(),
     VitePWA({
       registerType: 'autoUpdate',
+      // injectManifest: we own the SW source; Workbox injects the precache manifest at build time
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       includeAssets: ['favicon.svg', 'icons.svg'],
       manifest: {
         name: 'HomeTracker',
@@ -43,6 +49,10 @@ export default defineConfig({
             purpose: 'any maskable',
           },
         ],
+      },
+      devOptions: {
+        enabled: true,
+        type: 'module',
       },
     }),
   ],

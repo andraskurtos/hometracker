@@ -29,3 +29,9 @@ MODEL_NAME = os.environ.get("LLM_MODEL")
 UPLOAD_DIR = os.environ.get("UPLOAD_DIR")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+# --- Web Push (VAPID) ---
+# Generate once with: python -c "from py_vapid import Vapid; v=Vapid(); v.generate_keys(); print(v.private_pem(), v.public_pem())"
+VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY")
+VAPID_PUBLIC_KEY  = os.environ.get("VAPID_PUBLIC_KEY")
+VAPID_SUBJECT     = os.environ.get("VAPID_SUBJECT", "mailto:admin@hometracker.local")
+

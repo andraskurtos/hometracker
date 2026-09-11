@@ -7,6 +7,7 @@ from psycopg2.extras import RealDictCursor
 from pydantic import BaseModel
 from routers.auth import get_current_user_id
 from config import DB_CONFIG, logger
+from routers.push import send_push_to_user, get_user_display_info
 
 router = APIRouter(
     prefix="/api/household",
@@ -115,6 +116,32 @@ def join_household(payload: HouseholdJoin, user_id: str = Depends(get_current_us
                     """, (household['id'], user_id))
         
         conn.commit()
+
+        # --- PUSH NOTIFICATIONS ---
+        # Notify all existing active members that someone joined.
+        # Runs after commit so failure never undoes the join.
+        try:
+            actor   = get_user_display_info(user_id)
+            title   = f"{actor['display_name']} joined {household['name']}!"
+            body    = f"{actor['display_name']} has joined your household."
+            icon    = actor["icon_url"]
+
+            notif_conn = psycopg2.connect(**DB_CONFIG)
+            notif_cur  = notif_conn.cursor(cursor_factory=RealDictCursor)
+            notif_cur.execute("""
+                SELECT user_id FROM household_members
+                WHERE household_id = %s AND user_id != %s AND is_active = TRUE
+            """, (household['id'], user_id))
+            existing_members = notif_cur.fetchall()
+            notif_cur.close()
+            notif_conn.close()
+
+            for member in existing_members:
+                send_push_to_user(str(member["user_id"]), title, body, "/", icon)
+        except Exception as push_err:
+            logger.warning(f"Push notification failed for household join {household['id']}: {push_err}")
+        # --- END PUSH ---
+
         return {"message": f"Successfully joined {household['name']}!", "household_id": household['id']}
         
     except psycopg2.Error as e:

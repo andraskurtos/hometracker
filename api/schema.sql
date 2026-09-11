@@ -266,6 +266,20 @@ ALTER SEQUENCE public.stores_id_seq OWNED BY public.stores.id;
 
 
 --
+-- Name: push_subscriptions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.push_subscriptions (
+    id         uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    user_id    uuid NOT NULL,
+    endpoint   text NOT NULL,
+    p256dh     text NOT NULL,
+    auth       text NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+--
 -- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
