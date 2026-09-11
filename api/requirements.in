@@ -1,0 +1,21 @@
+# Direct dependencies of the HomeTracker API.
+#
+# This is the hand-maintained source list. requirements.txt is the generated,
+# fully-pinned lock — regenerate it with:
+#
+#     uv pip compile requirements.in --python-version 3.14 -o requirements.txt
+#
+# Never build requirements.txt with `pip freeze` from a shared/general-purpose
+# virtualenv: it captures unrelated packages (torch/CUDA, OCR, other SDKs) and
+# can include local builds that do not exist on PyPI.
+
+fastapi==0.136.1
+uvicorn==0.46.0
+psycopg2-binary==2.9.12
+litellm==1.83.7
+pillow==12.2.0
+python-jose==3.5.0
+bcrypt==5.0.0
+python-dotenv==1.0.1
+python-multipart==0.0.27
+pydantic==2.12.5

@@ -17,8 +17,8 @@ DB_CONFIG = {
     "dbname": os.environ["DB_NAME"],
     "user": os.environ["DB_USER"],
     "password": os.environ["DB_PASSWORD"],
-    "host": "127.0.0.1",
-    "port": "5432"
+    "host": os.environ.get("DB_HOST", "127.0.0.1"),
+    "port": os.environ.get("DB_PORT", "5432"),
 }
 
 SECRET_KEY = os.environ.get("JWT_KEY")

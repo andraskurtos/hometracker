@@ -1,0 +1,61 @@
+# HomeTracker — full stack for LAN deployment.
+#
+#   cp .env.example .env   # then fill it in
+#   docker compose up -d --build
+#   docker compose exec api python init_db.py     # first run only
+#
+# Access at http://<server-lan-ip>:<WEB_PORT>
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./api
+    restart: unless-stopped
+    environment:
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: db
+      DB_PORT: "5432"
+      JWT_KEY: ${JWT_KEY}
+      LLM_MODEL: ${LLM_MODEL}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      UPLOAD_DIR: /app/uploads/avatars
+    volumes:
+      # Uploaded avatars persist on the host.
+      - ./api/uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/').read()\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  web:
+    build: ./frontend/hometracker
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-80}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  pgdata:

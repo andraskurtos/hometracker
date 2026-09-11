@@ -46,7 +46,8 @@ export const calculateShares = (
 
   return ownersData.map(o => ({
     userId: o.userId,
-    amount: o.amountCents / 100
+    amount: o.amountCents / 100,
+    settled: 'unsettled' as const,
   }));
 };
 

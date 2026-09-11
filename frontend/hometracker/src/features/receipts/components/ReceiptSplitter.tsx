@@ -10,7 +10,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { StatCard } from '@/components/ui/StatCard';
 import { PageLayout } from '@/components/ui/PageLayout';
 import { PopupMenu } from '@/components/ui/PopupMenu';
-import { useReceiptDebts, useUpdateItemOwners, useUpdateReceiptItem } from '../hooks/useReceipts';
+import { useReceiptDebts, useUpdateReceiptItem } from '../hooks/useReceipts';
 import { useReceiptSplitterLogic } from '../hooks/useReceiptSplitterLogic';
 import { useSplitMenuLogic } from '../hooks/useSplitMenuLogic';
 import { storageService } from '@/services/storageService';

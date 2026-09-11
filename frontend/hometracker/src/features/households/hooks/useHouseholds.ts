@@ -31,7 +31,7 @@ export const useSettleBulkDebts = () => {
   return useMutation({
     mutationFn: ({ householdId, debtorId }: { householdId: string; debtorId: string }) => 
       householdService.settleBulkDebts(householdId, debtorId),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.households.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.receipts.list() });
     },

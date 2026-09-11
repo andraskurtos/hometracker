@@ -1,6 +1,7 @@
 import { storageService } from './storageService';
+import { API_BASE_URL as API_ROOT } from '@/config/api';
 
-const API_BASE_URL = `http://${window.location.hostname}:8000/api/receipts`;
+const API_BASE_URL = `${API_ROOT}/receipts`;
 
 const getHeaders = () => {
     const headers: HeadersInit = {

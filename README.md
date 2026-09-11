@@ -67,17 +67,18 @@ HomeTracker is a self-hosted household management suite. Its flagship feature is
    pip install -r api/requirements.txt
    ```
 
-3. Configure environment in `api/.env`:
+3. Configure environment — `cp api/.env.example api/.env`, then fill it in:
 
    | Variable | Purpose |
    |---|---|
-   | `DB_NAME`, `DB_USER`, `DB_PASSWORD` | PostgreSQL credentials |
+   | `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT` | PostgreSQL connection |
    | `JWT_KEY` | Secret for signing JWT tokens |
    | `LLM_MODEL` | LiteLLM model id (a Gemini vision model) |
    | `GEMINI_API_KEY` | API key for the vision model |
    | `UPLOAD_DIR` | Directory for uploaded avatars |
 
-4. Run the server (from `api/`):
+4. Run the server (from `api/` — the app uses flat imports, so the working
+   directory matters):
 
    ```bash
    uvicorn server:app --reload
@@ -89,6 +90,79 @@ HomeTracker is a self-hosted household management suite. Its flagship feature is
 cd frontend/hometracker
 npm install
 npm run dev
+```
+
+The dev server proxies `/api` and `/uploads` to `http://localhost:8000`, so the
+frontend is same-origin in development too — no API URL to configure. To point
+at a backend on another machine, set `VITE_API_ORIGIN` (see
+`frontend/hometracker/.env.example`).
+
+## Deployment (LAN, Docker)
+
+The root `docker-compose.yml` runs the whole stack: Postgres, the API, and nginx
+serving the built frontend. Only the frontend is published; the API and database
+stay on the internal network.
+
+1. Create the deployment config:
+
+   ```bash
+   cp .env.example .env
+   # edit .env: DB_PASSWORD, JWT_KEY, GEMINI_API_KEY, WEB_PORT
+   ```
+
+2. Build and start:
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+3. Initialize the schema (first run only):
+
+   ```bash
+   docker compose exec api python init_db.py
+   ```
+
+The UI is then at `http://<server-lan-ip>:<WEB_PORT>`.
+
+### How the pieces connect
+
+- **web** (nginx) serves the React bundle and reverse-proxies `/api` and
+  `/uploads` to the `api` service. The frontend calls those relative paths, so
+  nothing about host, port, or scheme is baked into the bundle — it works behind
+  any address, with or without TLS.
+- **api** (uvicorn) reaches `db` over the compose network. Its database host and
+  upload directory are supplied by `docker-compose.yml`, not `api/.env`.
+- **db** stores its data in the named volume `pgdata`; uploaded avatars persist
+  in `./api/uploads` on the host.
+
+### Schema changes
+
+`schema.sql` is the source of truth and the stored data is disposable, so the
+workflow is rebuild-from-scratch rather than incremental migrations:
+
+```bash
+docker compose exec api python init_db.py --reset
+```
+
+### Dependency locking
+
+`api/requirements.txt` is a generated lock, not hand-edited. `api/requirements.in`
+holds the direct dependencies; regenerate the lock with:
+
+```bash
+uv pip compile api/requirements.in --python-version 3.14 -o api/requirements.txt
+```
+
+Do not generate it with `pip freeze` from a shared virtualenv — that captures
+unrelated packages and can include local builds that are not installable.
+
+## Releasing
+
+```bash
+git tag -a v1.0.0 -m "HomeTracker 1.0.0"
+git push origin main
+git push origin v1.0.0
+gh release create v1.0.0 --title "HomeTracker 1.0.0" --notes-file CHANGELOG.md
 ```
 
 ## Database Schema

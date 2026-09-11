@@ -5,7 +5,6 @@ import { Spinner } from '../../../components/ui/Spinner';
 import { StatCard } from '../../../components/ui/StatCard';
 import { Card } from '../../../components/ui/Card';
 import { ExternalLink, Check, X } from 'lucide-react';
-import { storageService } from '../../../services/storageService';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
 
@@ -16,7 +15,6 @@ interface GlobalDebtSummaryProps {
 
 export const GlobalDebtSummary = ({ householdId, currency = 'HUF' }: GlobalDebtSummaryProps) => {
   const { t } = useTranslation();
-  const userId = storageService.getUserId();
   
   const { data: summary, isLoading: isLoadingSummary } = useFinancialSummary(householdId);
   const { data: members = [], isLoading: isLoadingMembers } = useHouseholdMembers(householdId);

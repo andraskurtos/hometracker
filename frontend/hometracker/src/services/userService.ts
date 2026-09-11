@@ -1,6 +1,5 @@
 import { storageService } from './storageService';
-
-const API_BASE_URL = `http://${window.location.hostname}:8000/api`;
+import { API_BASE_URL } from '@/config/api';
 
 const getHeaders = (includeAuth = true) => {
     const headers: HeadersInit = {
