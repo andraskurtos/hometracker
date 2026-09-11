@@ -15,6 +15,7 @@ HomeTracker is a self-hosted household management suite. Its flagship feature is
 - **Debt engine** — per-receipt and household-level summaries, with a settlement workflow (`unsettled → pending → settled`)
 - **Auth** — JWT + bcrypt, register/login
 - **User profiles** — display name, avatar upload, Revolut/Discord links
+- **Web Push Notifications** — PWA support with push notifications for new receipts and members joining (VAPID)
 - **i18n** — English and Hungarian, no hardcoded UI strings
 
 ### Roadmap
@@ -76,6 +77,15 @@ HomeTracker is a self-hosted household management suite. Its flagship feature is
    | `LLM_MODEL` | LiteLLM model id (a Gemini vision model) |
    | `GEMINI_API_KEY` | API key for the vision model |
    | `UPLOAD_DIR` | Directory for uploaded avatars |
+   | `VAPID_PRIVATE_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_SUBJECT` | Web Push keys and subject (must be a real TLD, e.g. `.app`, `.com`) |
+
+   **Generating Keys:**
+   - **`JWT_KEY`**: Run `python -c "import secrets; print(secrets.token_urlsafe(48))"` to generate a secure random string.
+   - **`VAPID` keys**: Run the following from within the virtualenv to generate the private and public keys for push notifications:
+     ```bash
+     python -c "from py_vapid import Vapid; import base64; v=Vapid(); v.generate_keys(); print('Private:', base64.urlsafe_b64encode(v.private_key.private_numbers().private_value.to_bytes(32,'big')).rstrip(b'=').decode()); import cryptography.hazmat.primitives.serialization as sz; print('Public:', base64.urlsafe_b64encode(v.public_key.public_bytes(sz.Encoding.X962, sz.PublicFormat.UncompressedPoint)).rstrip(b'=').decode())"
+     ```
+
 
 4. Run the server (from `api/` — the app uses flat imports, so the working
    directory matters):
@@ -96,6 +106,8 @@ The dev server proxies `/api` and `/uploads` to `http://localhost:8000`, so the
 frontend is same-origin in development too — no API URL to configure. To point
 at a backend on another machine, set `VITE_API_ORIGIN` (see
 `frontend/hometracker/.env.example`).
+
+> **Note on Push Notifications (Dev):** The dev server is configured with `vite-plugin-mkcert` to run on HTTPS. This is strictly required by browsers (especially iOS) to test Web Push and Service Workers locally. You will need to install `mkcert` and trust its local root CA on your testing device to test push notifications during development.
 
 ## Deployment (LAN, Docker)
 

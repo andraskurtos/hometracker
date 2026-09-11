@@ -6,6 +6,7 @@ from typing import List, Optional
 from routers.auth import get_current_user_id
 from config import DB_CONFIG, logger
 from receipt_reader import ReceiptReader as reader
+from routers.push import send_push_to_user, get_user_display_info
 
 router = APIRouter(
     prefix="/api/receipts",
@@ -121,7 +122,35 @@ async def parse_receipt(
         # Commit the transaction to save to disk
         conn.commit()
         cur.close()
-        
+
+        # --- PUSH NOTIFICATIONS ---
+        # Notify all other members of the household that a receipt was added.
+        # Runs after commit so a notification failure never rolls back the receipt.
+        try:
+            actor     = get_user_display_info(user_id)
+            store     = parsed_data.get("store", {}).get("name", "a store")
+            total     = parsed_data.get("receipt", {}).get("total_amount", "")
+            total_str = f" ({total})" if total else ""
+            title     = "New receipt added"
+            body      = f"{actor['display_name']} added a receipt from {store}{total_str}"
+            icon      = actor["icon_url"]
+
+            notif_conn = psycopg2.connect(**DB_CONFIG)
+            notif_cur  = notif_conn.cursor(cursor_factory=RealDictCursor)
+            notif_cur.execute("""
+                SELECT user_id FROM household_members
+                WHERE household_id = %s AND user_id != %s AND is_active = TRUE
+            """, (household_id, user_id))
+            other_members = notif_cur.fetchall()
+            notif_cur.close()
+            notif_conn.close()
+
+            for member in other_members:
+                send_push_to_user(str(member["user_id"]), title, body, "/", icon)
+        except Exception as push_err:
+            logger.warning(f"Push notification failed for receipt {receipt_id}: {push_err}")
+        # --- END PUSH ---
+
         return {
             "status": "success",
             "message": f"Saved receipt {receipt_id} to household {household_id}",

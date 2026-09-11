@@ -10,8 +10,14 @@
   }
 }
 
-/* Global scrollbar removal */
+/* Global scrollbar removal + PWA overscroll bleed fix */
 @layer base {
+  html,
+  body {
+    background-color: #0a0a0a; /* neutral-950 – matches app bg, prevents white overscroll on mobile */
+    overscroll-behavior: none;  /* disables the rubber-band bounce that reveals the white bg */
+  }
+
   * {
     -ms-overflow-style: none;
     scrollbar-width: none;

@@ -1,4 +1,4 @@
-import { User, ShieldCheck, CreditCard, Camera, CheckCircle2, Loader2 } from 'lucide-react';
+import { User, ShieldCheck, CreditCard, Camera, CheckCircle2, Loader2, Bell, BellOff } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ReturnButton } from '@/components/ui/ReturnButton';
@@ -9,6 +9,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Spinner } from '@/components/ui/Spinner';
 import { PageLayout } from '@/components/ui/PageLayout';
 import { useProfileLogic } from '../hooks/useProfileLogic';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 interface ProfileProps {
   onBack: () => void;
@@ -17,6 +18,7 @@ interface ProfileProps {
 
 export default function Profile({ onBack }: ProfileProps) {
   const logic = useProfileLogic(onBack);
+  const push = usePushNotifications();
   const {
     t,
     formData,
@@ -117,26 +119,38 @@ export default function Profile({ onBack }: ProfileProps) {
       </GlassSection>
 
       <GlassSection title={t('profile.sections.personalData')} icon={<ShieldCheck size={18} />}>
+        {/* Gender — mirrors Input.tsx classes exactly */}
         <div className="flex flex-col gap-1.5 w-full">
-          <label className="text-xs font-medium text-neutral-500 uppercase tracking-wider ml-1">{t('profile.fields.gender')}</label>
-          <select 
+          <label className="text-xs font-medium text-neutral-500 uppercase tracking-wider ml-1">
+            {t('profile.fields.gender')}
+          </label>
+          <select
             value={formData.gender}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleInputChange('gender', e.target.value)}
-            className={`w-full px-4 py-2.5 rounded-xl bg-neutral-900/60 border ${isFieldEmpty(formData.gender) ? 'border-red-500/50 focus:border-red-500' : 'border-neutral-800/60 focus:border-emerald-500/50'} text-neutral-200 outline-none transition-all duration-200 appearance-none`}
+            style={{ colorScheme: 'dark' }}
+            className={`w-full py-3 px-4 bg-neutral-800/50 border rounded-xl text-neutral-200 appearance-none focus:outline-none transition-all ${
+              isFieldEmpty(formData.gender)
+                ? 'border-red-500/50 focus:ring-2 focus:ring-red-500/50 focus:border-red-500'
+                : 'border-neutral-700 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500'
+            }`}
           >
-            <option value="" disabled>{t('profile.genderOptions.select')}</option>
-            <option value="male">{t('profile.genderOptions.male')}</option>
-            <option value="female">{t('profile.genderOptions.female')}</option>
-            <option value="other">{t('profile.genderOptions.other')}</option>
+            <option value="" disabled className="bg-neutral-900">{t('profile.genderOptions.select')}</option>
+            <option value="male" className="bg-neutral-900">{t('profile.genderOptions.male')}</option>
+            <option value="female" className="bg-neutral-900">{t('profile.genderOptions.female')}</option>
+            <option value="other" className="bg-neutral-900">{t('profile.genderOptions.other')}</option>
           </select>
         </div>
-        <Input 
-          label={t('profile.fields.dob')} 
-          value={formData.dob} 
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('dob', e.target.value)} 
-          error={isFieldEmpty(formData.dob)} 
-          type="date" 
-        />
+        {/* Date of birth — overflow-hidden clips the native date control on mobile */}
+        <div className="overflow-hidden min-w-0 w-full">
+          <Input
+            label={t('profile.fields.dob')}
+            value={formData.dob}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('dob', e.target.value)}
+            error={isFieldEmpty(formData.dob)}
+            type="date"
+            style={{ colorScheme: 'dark' }}
+          />
+        </div>
       </GlassSection>
 
       <GlassSection title={t('profile.sections.integrations')} icon={<CreditCard size={18} />}>
@@ -154,6 +168,52 @@ export default function Profile({ onBack }: ProfileProps) {
           error={isFieldEmpty(formData.discordId)} 
           placeholder={t('profile.placeholders.discord')} 
         />
+      </GlassSection>
+
+      {/* Push Notifications — always visible; degrades gracefully when unsupported */}
+      <GlassSection title="Push Notifications" icon={<Bell size={18} />} columns={1}>
+        {!push.isSupported ? (
+          <div className="flex items-center gap-3 text-sm text-neutral-500">
+            <BellOff size={16} className="shrink-0" />
+            <p>Push notifications require HTTPS and an installed PWA. Add the app to your home screen to enable them.</p>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-1 min-w-0">
+              <p className="text-sm text-neutral-300">
+                {push.isSubscribed
+                  ? 'Notifications are enabled on this device.'
+                  : 'Get notified about activity in your households.'}
+              </p>
+              {push.error && (
+                <p className="text-xs text-red-400 break-words">{push.error}</p>
+              )}
+              <div className="flex items-center gap-1.5 text-xs text-neutral-500 mt-0.5">
+                {push.isSubscribed
+                  ? <><CheckCircle2 size={12} className="text-emerald-500 shrink-0" /> Active on this device</>
+                  : <><BellOff size={12} className="shrink-0" /> Not active on this device</>}
+              </div>
+            </div>
+            {/* Toggle */}
+            <button
+              id="push-notifications-toggle"
+              onClick={push.isSubscribed ? push.unsubscribe : push.subscribe}
+              disabled={push.isLoading}
+              className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-50 ${
+                push.isSubscribed ? 'bg-emerald-500' : 'bg-neutral-700'
+              }`}
+              aria-label={push.isSubscribed ? 'Disable push notifications' : 'Enable push notifications'}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full shadow transition-transform duration-200 ${
+                  push.isLoading ? 'bg-neutral-300' : 'bg-white'
+                } ${
+                  push.isSubscribed ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+        )}
       </GlassSection>
 
       {/* Save Button */}
