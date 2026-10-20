@@ -2,6 +2,15 @@ import os
 import logging
 from dotenv import load_dotenv
 
+# psycopg2 cannot bind a uuid.UUID object out of the box, and path parameters
+# declared as UUID hand one straight to the query. Register only the adapter:
+# uuid columns keep decoding as strings, so existing string comparisons and
+# JSON responses are unchanged.
+import uuid as _uuid
+from psycopg2.extensions import AsIs, register_adapter
+
+register_adapter(_uuid.UUID, lambda value: AsIs("'%s'::uuid" % value))
+
 load_dotenv()
 
 logging.basicConfig(

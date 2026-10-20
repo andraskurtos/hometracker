@@ -8,7 +8,7 @@ import { useHouseholdMembers } from '@/features/households/hooks/useHouseholds';
 export type SplitMode = 'percent' | 'pcs';
 
 interface UseSplitMenuLogicProps {
-  receiptId: number;
+  receiptId: string;
   item: UIItem;
   householdId: string;
   onClose: () => void;

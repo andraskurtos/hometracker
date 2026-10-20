@@ -51,6 +51,18 @@ HomeTracker is a self-hosted household management suite. Its flagship feature is
 - Node.js
 - Docker (for PostgreSQL)
 
+### Dev servers (fast path)
+
+```bash
+./dev.sh
+```
+
+Starts the dev Postgres, applies `schema.sql` if the database is empty, then runs
+uvicorn with `--reload` on `:8000` and Vite on `https://localhost:5173`, with both
+logs interleaved. Ctrl-C stops the two servers and leaves Postgres running, so the
+next start is instant. Flags: `--no-web`, `--no-api`, `--reset` (rebuild the dev
+schema). The manual steps below are the longer equivalent.
+
 ### Backend
 
 1. Start PostgreSQL:
@@ -114,6 +126,26 @@ at a backend on another machine, set `VITE_API_ORIGIN` (see
 The root `docker-compose.yml` runs the whole stack: Postgres, the API, and nginx
 serving the built frontend. Only the frontend is published; the API and database
 stay on the internal network.
+
+### One-shot setup
+
+```bash
+./setup.sh
+```
+
+Generates `.env` (DB password, JWT key, VAPID key pair) with mode `600`, builds
+both images, starts the stack, waits for health, and applies the schema. It never
+prints the secrets it creates and is safe to re-run: existing values are kept,
+containers are only recreated when their config changed, and the schema init is
+idempotent.
+
+On an interactive run it prompts for the Gemini API key with hidden input; press
+Enter to skip and the stack still comes up, with receipt parsing disabled until
+you add the key. `--gemini-key KEY` supplies it non-interactively (and `--yes`
+suppresses the prompt entirely, for automation). Use `--reset-db` to destroy the
+database volume and rebuild, `--force` to rotate the JWT/VAPID secrets.
+
+### Manual setup
 
 1. Create the deployment config:
 

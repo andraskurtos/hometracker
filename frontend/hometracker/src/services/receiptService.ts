@@ -24,7 +24,7 @@ export interface BackendOwner {
 }
 
 export interface BackendItem {
-  id: number;
+  id: string;
   name: string;
   receipt_name: string;
   size: number | null;
@@ -35,7 +35,7 @@ export interface BackendItem {
 }
 
 export interface BackendReceipt {
-  id: number;
+  id: string;
   store: { name: string };
   total_amount: number;
   payment_method: string;
@@ -64,7 +64,7 @@ export interface UIOwner {
 }
 
 export interface UIItem {
-  id: number;
+  id: string;
   name: string;
   qty: number;
   size: string;
@@ -74,7 +74,7 @@ export interface UIItem {
 }
 
 export interface UIReceipt {
-  id: number;
+  id: string;
   storeName: string;
   date: string;
   totalAmount: number;
@@ -152,7 +152,7 @@ export const receiptService = {
     });
   },
 
-  fetchReceiptDebts: async (receiptId: number): Promise<BackendDebts> => {
+  fetchReceiptDebts: async (receiptId: string): Promise<BackendDebts> => {
     const response = await fetch(`${API_BASE_URL}/${receiptId}/debts`, {
       headers: getHeaders(),
     });
@@ -181,7 +181,7 @@ export const receiptService = {
     return await response.json();
   },
 
-  updateItemOwners: async (receiptId: number, itemId: number, owners: UIOwner[]) => {
+  updateItemOwners: async (receiptId: string, itemId: string, owners: UIOwner[]) => {
     const response = await fetch(`${API_BASE_URL}/${receiptId}/${itemId}`, {
       method: 'PUT',
       headers: getHeaders(),
@@ -201,7 +201,7 @@ export const receiptService = {
     return await response.json();
   },
 
-  deleteReceipt: async (receiptId: number) => {
+  deleteReceipt: async (receiptId: string) => {
     const response = await fetch(`${API_BASE_URL}/${receiptId}`, {
       method: 'DELETE',
       headers: getHeaders(),
@@ -215,7 +215,7 @@ export const receiptService = {
     return await response.json();
   },
 
-  updateReceiptItem: async (receiptId: number, itemId: number, payload: { name?: string, size?: number, quantity?: number, price_paid?: number }) => {
+  updateReceiptItem: async (receiptId: string, itemId: string, payload: { name?: string, size?: number, quantity?: number, price_paid?: number }) => {
     const response = await fetch(`${API_BASE_URL}/${receiptId}/items/${itemId}`, {
       method: 'PUT',
       headers: getHeaders(),
@@ -230,7 +230,7 @@ export const receiptService = {
     return await response.json();
   },
 
-  markReceiptAsPending: async (receiptId: number) => {
+  markReceiptAsPending: async (receiptId: string) => {
     const response = await fetch(`${API_BASE_URL}/${receiptId}/settle`, {
       method: 'PATCH',
       headers: getHeaders(),
@@ -244,7 +244,7 @@ export const receiptService = {
     return await response.json();
   },
 
-  confirmReceiptSettlement: async (receiptId: number, targetUserId: string) => {
+  confirmReceiptSettlement: async (receiptId: string, targetUserId: string) => {
     const response = await fetch(`${API_BASE_URL}/${receiptId}/settle-confirm/${targetUserId}`, {
       method: 'PATCH',
       headers: getHeaders(),

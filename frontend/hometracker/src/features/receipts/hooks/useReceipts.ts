@@ -23,7 +23,7 @@ export const useUploadReceipt = (householdId: string | null) => {
 export const useUpdateItemOwners = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ receiptId, itemId, owners }: { receiptId: number; itemId: number; owners: UIOwner[] }) => 
+    mutationFn: ({ receiptId, itemId, owners }: { receiptId: string; itemId: string; owners: UIOwner[] }) => 
       receiptService.updateItemOwners(receiptId, itemId, owners),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.receipts.list() });
@@ -35,7 +35,7 @@ export const useUpdateItemOwners = () => {
 export const useDeleteReceipt = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (receiptId: number) => receiptService.deleteReceipt(receiptId),
+    mutationFn: (receiptId: string) => receiptService.deleteReceipt(receiptId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.receipts.list() });
     },
@@ -45,7 +45,7 @@ export const useDeleteReceipt = () => {
 export const useUpdateReceiptItem = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ receiptId, itemId, payload }: { receiptId: number; itemId: number; payload: { name?: string, size?: number, quantity?: number, price_paid?: number } }) => 
+    mutationFn: ({ receiptId, itemId, payload }: { receiptId: string; itemId: string; payload: { name?: string, size?: number, quantity?: number, price_paid?: number } }) => 
       receiptService.updateReceiptItem(receiptId, itemId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.receipts.list() });
@@ -56,7 +56,7 @@ export const useUpdateReceiptItem = () => {
 export const useMarkAsPending = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (receiptId: number) => receiptService.markReceiptAsPending(receiptId),
+    mutationFn: (receiptId: string) => receiptService.markReceiptAsPending(receiptId),
     onSuccess: (_, receiptId) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.receipts.list() });
       queryClient.invalidateQueries({ queryKey: ['receipts', 'debts', receiptId] });
@@ -67,7 +67,7 @@ export const useMarkAsPending = () => {
 export const useConfirmSettlement = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ receiptId, targetUserId }: { receiptId: number; targetUserId: string }) => 
+    mutationFn: ({ receiptId, targetUserId }: { receiptId: string; targetUserId: string }) => 
       receiptService.confirmReceiptSettlement(receiptId, targetUserId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.receipts.list() });
@@ -76,7 +76,7 @@ export const useConfirmSettlement = () => {
   });
 };
 
-export const useReceiptDebts = (receiptId: number | null) => {
+export const useReceiptDebts = (receiptId: string | null) => {
   return useQuery({
     queryKey: ['receipts', 'debts', receiptId],
     queryFn: () => receiptService.fetchReceiptDebts(receiptId!),

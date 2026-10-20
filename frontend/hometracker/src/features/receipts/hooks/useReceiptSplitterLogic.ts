@@ -25,7 +25,7 @@ export const useReceiptSplitterLogic = (householdId: string | null) => {
   // UI State
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [closingReceiptIds, setClosingReceiptIds] = useState<Set<number>>(new Set());
-  const [activeSplitId, setActiveSplitId] = useState<{ receiptId: number, itemId: number } | null>(null);
+  const [activeSplitId, setActiveSplitId] = useState<{ receiptId: string, itemId: string } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   
@@ -66,7 +66,7 @@ export const useReceiptSplitterLogic = (householdId: string | null) => {
     }
   };
 
-  const handleDeleteReceipt = async (receiptId: number) => {
+  const handleDeleteReceipt = async (receiptId: string) => {
     if (!window.confirm(t('common.confirmDelete'))) return;
     try {
       await deleteMutation.mutateAsync(receiptId);
@@ -75,7 +75,7 @@ export const useReceiptSplitterLogic = (householdId: string | null) => {
     }
   };
 
-  const handleMarkAsPending = async (receiptId: number) => {
+  const handleMarkAsPending = async (receiptId: string) => {
     try {
       await markAsPendingMutation.mutateAsync(receiptId);
     } catch (err) {
@@ -83,7 +83,7 @@ export const useReceiptSplitterLogic = (householdId: string | null) => {
     }
   };
 
-  const handleConfirmSettlement = async (receiptId: number, targetUserId: string) => {
+  const handleConfirmSettlement = async (receiptId: string, targetUserId: string) => {
     try {
       await confirmSettlementMutation.mutateAsync({ receiptId, targetUserId });
     } catch (err) {

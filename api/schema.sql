@@ -104,8 +104,8 @@ CREATE TABLE public.households (
 --
 
 CREATE TABLE public.item_owners (
-    id integer NOT NULL,
-    receipt_item_id integer,
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    receipt_item_id uuid,
     user_id uuid,
     amount numeric NOT NULL,
     settled public.settled_status DEFAULT 'unsettled'::public.settled_status,
@@ -114,31 +114,11 @@ CREATE TABLE public.item_owners (
 
 
 --
--- Name: item_owners_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.item_owners_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: item_owners_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.item_owners_id_seq OWNED BY public.item_owners.id;
-
-
---
 -- Name: items; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.items (
-    id integer NOT NULL,
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     receipt_name character varying(255) NOT NULL,
     name character varying(255) NOT NULL,
     size numeric,
@@ -147,56 +127,16 @@ CREATE TABLE public.items (
 
 
 --
--- Name: items_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.items_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: items_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.items_id_seq OWNED BY public.items.id;
-
-
---
 -- Name: receipt_items; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.receipt_items (
-    id integer NOT NULL,
-    receipt_id integer,
-    item_id integer,
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    receipt_id uuid,
+    item_id uuid,
     quantity numeric NOT NULL,
     price_paid numeric NOT NULL
 );
-
-
---
--- Name: receipt_items_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.receipt_items_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: receipt_items_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.receipt_items_id_seq OWNED BY public.receipt_items.id;
 
 
 --
@@ -204,34 +144,14 @@ ALTER SEQUENCE public.receipt_items_id_seq OWNED BY public.receipt_items.id;
 --
 
 CREATE TABLE public.receipts (
-    id integer NOT NULL,
-    store_id integer,
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    store_id uuid,
     total numeric NOT NULL,
     payment_method public.payment_enum,
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     household_id uuid,
     payee uuid
 );
-
-
---
--- Name: receipts_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.receipts_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: receipts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.receipts_id_seq OWNED BY public.receipts.id;
 
 
 --
@@ -239,30 +159,10 @@ ALTER SEQUENCE public.receipts_id_seq OWNED BY public.receipts.id;
 --
 
 CREATE TABLE public.stores (
-    id integer NOT NULL,
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     name character varying(255) NOT NULL,
     logo character varying(255)
 );
-
-
---
--- Name: stores_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.stores_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: stores_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.stores_id_seq OWNED BY public.stores.id;
 
 
 --
@@ -270,11 +170,11 @@ ALTER SEQUENCE public.stores_id_seq OWNED BY public.stores.id;
 --
 
 CREATE TABLE public.push_subscriptions (
-    id         uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    user_id    uuid NOT NULL,
-    endpoint   text NOT NULL,
-    p256dh     text NOT NULL,
-    auth       text NOT NULL,
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    user_id uuid NOT NULL,
+    endpoint text NOT NULL,
+    p256dh text NOT NULL,
+    auth text NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -300,41 +200,6 @@ CREATE TABLE public.users (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
 );
-
-
---
--- Name: item_owners id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.item_owners ALTER COLUMN id SET DEFAULT nextval('public.item_owners_id_seq'::regclass);
-
-
---
--- Name: items id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.items ALTER COLUMN id SET DEFAULT nextval('public.items_id_seq'::regclass);
-
-
---
--- Name: receipt_items id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.receipt_items ALTER COLUMN id SET DEFAULT nextval('public.receipt_items_id_seq'::regclass);
-
-
---
--- Name: receipts id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.receipts ALTER COLUMN id SET DEFAULT nextval('public.receipts_id_seq'::regclass);
-
-
---
--- Name: stores id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.stores ALTER COLUMN id SET DEFAULT nextval('public.stores_id_seq'::regclass);
 
 
 --
@@ -442,83 +307,111 @@ ALTER TABLE ONLY public.push_subscriptions
 
 
 --
--- Name: household_members household_members_household_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: push_subscriptions push_subscriptions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.push_subscriptions
+    ADD CONSTRAINT push_subscriptions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: idx_push_subscriptions_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_push_subscriptions_user_id ON public.push_subscriptions USING btree (user_id);
+
+
+--
+-- Indexes on foreign keys and hot filters
+--
+-- PostgreSQL indexes primary keys and unique constraints, not foreign keys.
+-- Without these, every cascade and every RESTRICT check scans the child table,
+-- and the debt summary scans receipt_items for each household.
+--
+
+CREATE INDEX idx_household_members_user_id ON public.household_members USING btree (user_id);
+
+
+CREATE INDEX idx_households_created_by ON public.households USING btree (created_by);
+
+
+CREATE INDEX idx_item_owners_receipt_item_id ON public.item_owners USING btree (receipt_item_id);
+
+
+CREATE INDEX idx_item_owners_user_id ON public.item_owners USING btree (user_id);
+
+
+CREATE INDEX idx_receipt_items_item_id ON public.receipt_items USING btree (item_id);
+
+
+CREATE INDEX idx_receipt_items_receipt_id ON public.receipt_items USING btree (receipt_id);
+
+
+-- The receipt list filters by household and orders by date, so one composite
+-- index serves both the filter and the sort, and still leads on household_id
+-- for the RESTRICT check when a household is deleted.
+CREATE INDEX idx_receipts_household_id_created_at ON public.receipts USING btree (household_id, created_at DESC);
+
+
+CREATE INDEX idx_receipts_payee ON public.receipts USING btree (payee);
+
+
+CREATE INDEX idx_receipts_store_id ON public.receipts USING btree (store_id);
+
+
+--
+-- Foreign keys
+--
+-- Delete policy:
+--   CASCADE    rows that exist only as part of their parent: memberships,
+--              receipt lines, item splits, push subscriptions
+--   RESTRICT   financial records and product identity: refuse the delete rather
+--              than silently destroying money or receipt history
+--   SET NULL   optional attribution: the row survives, the link does not
 --
 
 ALTER TABLE ONLY public.household_members
-    ADD CONSTRAINT household_members_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id);
+    ADD CONSTRAINT household_members_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
 
-
---
--- Name: household_members household_members_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
 
 ALTER TABLE ONLY public.household_members
-    ADD CONSTRAINT household_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+    ADD CONSTRAINT household_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
-
---
--- Name: households households_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
 
 ALTER TABLE ONLY public.households
-    ADD CONSTRAINT households_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id);
+    ADD CONSTRAINT households_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
 
-
---
--- Name: item_owners item_owners_receipt_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
 
 ALTER TABLE ONLY public.item_owners
-    ADD CONSTRAINT item_owners_receipt_item_id_fkey FOREIGN KEY (receipt_item_id) REFERENCES public.receipt_items(id);
+    ADD CONSTRAINT item_owners_receipt_item_id_fkey FOREIGN KEY (receipt_item_id) REFERENCES public.receipt_items(id) ON DELETE CASCADE;
 
-
---
--- Name: item_owners item_owners_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
 
 ALTER TABLE ONLY public.item_owners
-    ADD CONSTRAINT item_owners_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+    ADD CONSTRAINT item_owners_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
 
-
---
--- Name: receipt_items receipt_items_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
 
 ALTER TABLE ONLY public.receipt_items
-    ADD CONSTRAINT receipt_items_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.items(id);
+    ADD CONSTRAINT receipt_items_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.items(id) ON DELETE RESTRICT;
 
-
---
--- Name: receipt_items receipt_items_receipt_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
 
 ALTER TABLE ONLY public.receipt_items
-    ADD CONSTRAINT receipt_items_receipt_id_fkey FOREIGN KEY (receipt_id) REFERENCES public.receipts(id);
+    ADD CONSTRAINT receipt_items_receipt_id_fkey FOREIGN KEY (receipt_id) REFERENCES public.receipts(id) ON DELETE CASCADE;
 
-
---
--- Name: receipts receipts_household_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
 
 ALTER TABLE ONLY public.receipts
-    ADD CONSTRAINT receipts_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id);
+    ADD CONSTRAINT receipts_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE RESTRICT;
 
-
---
--- Name: receipts receipts_payee_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
 
 ALTER TABLE ONLY public.receipts
-    ADD CONSTRAINT receipts_payee_fkey FOREIGN KEY (payee) REFERENCES public.users(id);
+    ADD CONSTRAINT receipts_payee_fkey FOREIGN KEY (payee) REFERENCES public.users(id) ON DELETE RESTRICT;
 
-
---
--- Name: receipts receipts_store_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
 
 ALTER TABLE ONLY public.receipts
-    ADD CONSTRAINT receipts_store_id_fkey FOREIGN KEY (store_id) REFERENCES public.stores(id);
+    ADD CONSTRAINT receipts_store_id_fkey FOREIGN KEY (store_id) REFERENCES public.stores(id) ON DELETE SET NULL;
+
+
+ALTER TABLE ONLY public.push_subscriptions
+    ADD CONSTRAINT push_subscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -526,4 +419,3 @@ ALTER TABLE ONLY public.receipts
 --
 
 \unrestrict F0a0hghUgNInspUuNvHHfUOjJgesIiJVkQ2bAbS9M6J5utO25HaG6HxWSM3q5hs
-

@@ -29,11 +29,11 @@ const DebtBreakdown = ({
   onMarkPending,
   onConfirmSettlement
 }: { 
-  receiptId: number, 
+  receiptId: string, 
   payeeId: string,
   members: HouseholdMember[],
-  onMarkPending: (id: number) => void,
-  onConfirmSettlement: (rId: number, uId: string) => void
+  onMarkPending: (id: string) => void,
+  onConfirmSettlement: (rId: string, uId: string) => void
 }) => {
   const { t } = useTranslation();
   const { data: debts, isLoading } = useReceiptDebts(receiptId);
@@ -144,7 +144,7 @@ const SplitMenu = memo(({
   onSuccess,
   anchorRef
 }: { 
-  receiptId: number, 
+  receiptId: string, 
   item: UIItem, 
   householdId: string, 
   onClose: () => void, 

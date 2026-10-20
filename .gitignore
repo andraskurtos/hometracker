@@ -4,3 +4,6 @@ __pycache__/
 api/__pycache__/
 api/uploads/
 LLM_MANIFESTO.md
+
+# dev.sh live logs
+.dev-logs/

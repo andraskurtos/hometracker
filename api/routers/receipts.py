@@ -3,6 +3,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from pydantic import BaseModel
 from typing import List, Optional
+from uuid import UUID
 from routers.auth import get_current_user_id
 from config import DB_CONFIG, logger
 from receipt_reader import ReceiptReader as reader
@@ -270,8 +271,8 @@ def get_household_receipts(household_id: str, user_id: str = Depends(get_current
 
 @router.put("/{receipt_id}/{receipt_item_id}")
 def update_item_owners(
-    receipt_id: int,
-    receipt_item_id: int,
+    receipt_id: UUID,
+    receipt_item_id: UUID,
     payload: OwnersUpdate,
     user_id: str = Depends(get_current_user_id)
 ):
@@ -341,7 +342,7 @@ def update_item_owners(
 
 @router.get("/{receipt_id}/debts")
 def get_receipt_debts(
-    receipt_id: int,
+    receipt_id: UUID,
     user_id: str = Depends(get_current_user_id)
 ):
     """
@@ -420,8 +421,8 @@ def get_receipt_debts(
 
 @router.put("/{receipt_id}/items/{receipt_item_id}")
 def update_receipt_item(
-    receipt_id: int,
-    receipt_item_id: int,
+    receipt_id: UUID,
+    receipt_item_id: UUID,
     payload: ReceiptItemUpdate,
     user_id: str = Depends(get_current_user_id)
 ):
@@ -525,7 +526,7 @@ def update_receipt_item(
 
 @router.patch("/{receipt_id}/settle")
 def mark_receipt_as_pending(
-    receipt_id: int,
+    receipt_id: UUID,
     user_id: str = Depends(get_current_user_id)
 ):
     """
@@ -566,7 +567,7 @@ def mark_receipt_as_pending(
 
 @router.patch("/{receipt_id}/settle-confirm/{target_user_id}")
 def confirm_receipt_settlement(
-    receipt_id: int,
+    receipt_id: UUID,
     target_user_id: str,
     user_id: str = Depends(get_current_user_id)
 ):
@@ -618,7 +619,7 @@ def confirm_receipt_settlement(
 
 @router.delete("/{receipt_id}")
 def delete_receipt(
-    receipt_id: int,
+    receipt_id: UUID,
     user_id: str = Depends(get_current_user_id)
 ):
     """
