@@ -221,3 +221,4 @@ gh release create v1.0.0 --title "HomeTracker 1.0.0" --notes-file CHANGELOG.md
 | `receipts` | Master record (payee, total, payment method, household) |
 | `receipt_items` | Receipt ↔ item with `quantity` and `price_paid` |
 | `item_owners` | Splitting map — `amount` (`numeric(12,2)`), `settled` status |
+| `push_subscriptions` | Web Push subscription endpoints and encryption keys (`p256dh`, `auth`) per user |
